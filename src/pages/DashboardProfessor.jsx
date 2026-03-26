@@ -1,5 +1,66 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useCourses } from "../hooks/useCourses";
+
 function DashboardProfessor() {
-  return <h1>Área do Professor</h1>;
+  const { user } = useAuth();
+  const { createCourse, getCourses } = useCourses();
+
+  const [nomeCurso, setNomeCurso] = useState("");
+  const [courses, setCourses] = useState([]);
+
+  const handleCreate = async () => {
+    try {
+      await createCourse(nomeCurso);
+      setNomeCurso("");
+
+      // 🔥 atualiza lista após criar
+      const updatedCourses = await getCourses();
+      setCourses(updatedCourses);
+
+    } catch (erro) {
+      alert("Erro: " + erro.message);
+    }
+  };
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      const data = await getCourses();
+      setCourses(data);
+    };
+
+    fetchCourses();
+  }, []);
+
+  return (
+    <div>
+      <h1>Área do Professor</h1>
+      <p>Bem-vindo, {user?.email}</p>
+
+      <h2>Criar Disciplina</h2>
+
+      <input
+        type="text"
+        placeholder="Nome da disciplina"
+        value={nomeCurso}
+        onChange={(e) => setNomeCurso(e.target.value)}
+      />
+
+      <button onClick={handleCreate}>
+        Criar
+      </button>
+
+      <h2>Minhas Disciplinas</h2>
+
+      <ul>
+        {courses.map((course) => (
+          <li key={course.id}>
+            {course.nome}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export default DashboardProfessor;

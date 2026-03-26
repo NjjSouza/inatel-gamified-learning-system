@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../services/firebase";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 
 // cria o contexto
 const AuthContext = createContext();
@@ -59,10 +60,15 @@ export function AuthProvider({ children }) {
     await signInWithEmailAndPassword(auth, email, senha);
   };
 
+  const logout = async () => {
+    await signOut(auth);
+  };
+
   const value = {
     user,
     signup,
     login,
+    logout,
   };
 
   return (
