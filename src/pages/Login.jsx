@@ -8,6 +8,7 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [nome, setNome] = useState("");
   const [tipo, setTipo] = useState("aluno");
 
   const handleLogin = async () => {
@@ -20,7 +21,7 @@ function Login() {
 
   const handleRegister = async () => {
     try {
-      await signup(email, senha, tipo);
+      await signup(email, senha, tipo, nome);
       alert(`Usuário criado como ${tipo}!`);
     } catch (erro) {
       alert("Erro ao registrar: " + erro.message);
@@ -28,18 +29,23 @@ function Login() {
   };
 
   useEffect(() => {
-    if (user) {
-      if (user.tipo === "professor") {
-        navigate("/professor");
-      } else {
-        navigate("/aluno");
-      }
+    if (user?.tipo === "professor") {
+      navigate("/professor");
+    } else if (user?.tipo === "aluno") {
+      navigate("/aluno");
     }
   }, [user]);
 
   return (
     <div style={{ maxWidth: 300, margin: "0 auto", textAlign: "center" }}>
       <h2>G-Learning Login</h2>
+
+      <input
+        type="text"
+        placeholder="Nome"
+        onChange={(e) => setNome(e.target.value)}
+        style={{ width: "100%", marginBottom: 10 }}
+      />
 
       <input
         type="email"

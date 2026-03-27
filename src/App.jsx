@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import DashboardAluno from "./pages/DashboardAluno";
 import DashboardProfessor from "./pages/DashboardProfessor";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import CoursePage from "./pages/CoursePage";
 
 function App() {
   return (
@@ -25,6 +26,24 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardProfessor />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/professor/curso/:courseId"
+          element={
+            <ProtectedRoute>
+              <CoursePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/aluno/curso/:courseId"
+          element={
+            <ProtectedRoute>
+              <CoursePage />
             </ProtectedRoute>
           }
         />

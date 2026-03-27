@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useCourses } from "../hooks/useCourses";
+import { useNavigate } from "react-router-dom";
 
 function DashboardProfessor() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { createCourse, getCourses } = useCourses();
+
+  const navigate = useNavigate();
 
   const [nomeCurso, setNomeCurso] = useState("");
   const [courses, setCourses] = useState([]);
@@ -14,7 +17,6 @@ function DashboardProfessor() {
       await createCourse(nomeCurso);
       setNomeCurso("");
 
-      // 🔥 atualiza lista após criar
       const updatedCourses = await getCourses();
       setCourses(updatedCourses);
 
@@ -31,35 +33,45 @@ function DashboardProfessor() {
 
     fetchCourses();
   }, []);
+  
+  const handleSelect = (course) => {
+    navigate(`/professor/curso/${course.id}`);
+  };
 
   return (
-    <div>
-      <h1>Área do Professor</h1>
-      <p>Bem-vindo, {user?.email}</p>
+  <div>
+    <h1>Área do Professor</h1>
 
-      <h2>Criar Disciplina</h2>
+    <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <p>Bem-vindo, {user?.nome || "Usuário"}</p>
+        <button onClick={logout}>Sair</button>
+      </div>
 
-      <input
-        type="text"
-        placeholder="Nome da disciplina"
-        value={nomeCurso}
-        onChange={(e) => setNomeCurso(e.target.value)}
-      />
+    <h2>Criar Disciplina</h2>
 
-      <button onClick={handleCreate}>
-        Criar
-      </button>
+    <input
+      type="text"
+      placeholder="Nome da disciplina"
+      value={nomeCurso}
+      onChange={(e) => setNomeCurso(e.target.value)}
+    />
 
-      <h2>Minhas Disciplinas</h2>
+    <button onClick={handleCreate}>
+      Criar
+    </button>
 
-      <ul>
-        {courses.map((course) => (
-          <li key={course.id}>
+    <h2>Minhas Disciplinas</h2>
+
+    <ul>
+      {courses.map((course) => (
+        <li key={course.id}>
+          <button onClick={() => handleSelect(course)}>
             {course.nome}
-          </li>
-        ))}
-      </ul>
-    </div>
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
   );
 }
 

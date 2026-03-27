@@ -45,11 +45,12 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  const signup = async (email, senha, tipo) => {
+  const signup = async (email, senha, tipo, nome) => {
     const credenciais = await createUserWithEmailAndPassword(auth, email, senha);
     const user = credenciais.user;
 
     await setDoc(doc(db, "usuarios", user.uid), {
+      nome: nome || "Usuário",
       email: user.email,
       tipo: tipo,
       criadoEm: new Date(),
