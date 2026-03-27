@@ -5,6 +5,7 @@ import DashboardAluno from "./pages/DashboardAluno";
 import DashboardProfessor from "./pages/DashboardProfessor";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import CoursePage from "./pages/CoursePage";
+import JoinSession from "./pages/JoinSession";
 
 function App() {
   return (
@@ -44,6 +45,24 @@ function App() {
           element={
             <ProtectedRoute>
               <CoursePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/entrar"
+          element={
+            <ProtectedRoute>
+              <JoinSession/>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/aluno/sessao/:sessionId"
+          element={
+            <ProtectedRoute>
+              <div>Você entrou na sessão</div>
             </ProtectedRoute>
           }
         />

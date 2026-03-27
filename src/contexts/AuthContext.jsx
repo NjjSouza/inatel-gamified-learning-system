@@ -4,15 +4,12 @@ import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndP
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
-// cria o contexto
 const AuthContext = createContext();
 
-// hook personalizado
 export function useAuth() {
   return useContext(AuthContext);
 }
 
-// provider (envolve o app)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);

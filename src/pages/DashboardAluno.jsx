@@ -23,9 +23,19 @@ function DashboardAluno() {
     navigate(`/aluno/curso/${course.id}`);
   };
 
+  const handleJoinSession = () => {
+    navigate("/entrar");
+  };
+
   return (
     <div>
       <h1>Área do Aluno</h1>
+
+      <h2>Entrar em uma sessão</h2>
+      
+      <button onClick={handleJoinSession}>
+        Entrar com código
+      </button>
 
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <p>Bem-vindo, {user?.nome || "Usuário"}</p>
