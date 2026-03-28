@@ -11,12 +11,13 @@ import { useAuth } from "../contexts/AuthContext";
 export function useSessions() {
   const { user } = useAuth();
 
-  const createSession = async () => {
+  const createSession = async (quizId) => {
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
     const docRef = await addDoc(collection(db, "sessions"), {
       professorId: user.uid,
-      pin: pin,
+      quizId,
+      pin,
       status: "waiting",
       createdAt: new Date(),
     });

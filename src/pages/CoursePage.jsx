@@ -7,6 +7,7 @@ import { doc, getDoc } from "firebase/firestore";
 function CoursePage() {
   const { courseId } = useParams();
   const { getCourseById } = useCourses();
+  
   const navigate = useNavigate();
 
   const [course, setCourse] = useState(null);

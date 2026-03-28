@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 function DashboardAluno() {
   const { user, logout } = useAuth();
   const { getAllCourses } = useCourses();
+  
   const navigate = useNavigate();
 
   const [courses, setCourses] = useState([]);

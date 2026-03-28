@@ -3,21 +3,24 @@ import { useAuth } from "../contexts/AuthContext";
 import { useCourses } from "../hooks/useCourses";
 import { useNavigate } from "react-router-dom";
 import { useSessions } from "../hooks/useSessions";
+import { useQuizzes } from "../hooks/useQuizzes";
 
 function DashboardProfessor() {
   const { user, logout } = useAuth();
   const { createCourse, getCourses } = useCourses();
   const { createSession, listenPlayers, getSessions } = useSessions();
+  const { getQuizzes } = useQuizzes();
 
   const navigate = useNavigate();
 
   const [nomeCurso, setNomeCurso] = useState("");
   const [courses, setCourses] = useState([]);
-
   const [sessions, setSessions] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -37,6 +40,23 @@ function DashboardProfessor() {
     fetchSessions();
   }, []);
 
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      const data = await getQuizzes();
+      setQuizzes(data);
+    };
+
+    fetchQuizzes();
+  }, []);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const unsubscribe = listenPlayers(sessionId, setPlayers);
+
+    return () => unsubscribe();
+  }, [sessionId]);
+
   const handleCreate = async () => {
     try {
       await createCourse(nomeCurso);
@@ -54,23 +74,25 @@ function DashboardProfessor() {
   };
 
   const handleStartSession = async () => {
-    const session = await createSession();
+    try {
+      if (!selectedQuiz) {
+        alert("Selecione um quiz primeiro!");
+        return;
+      }
 
-    setSessionId(session.id);
-    setSelectedSession(session);
-    setPlayers([]);
+      const session = await createSession(selectedQuiz.id);
 
-    const updatedSessions = await getSessions();
-    setSessions(updatedSessions);
+      setSessionId(session.id);
+      setSelectedSession(session);
+      setPlayers([]);
+
+      const updatedSessions = await getSessions();
+      setSessions(updatedSessions);
+
+    } catch (erro) {
+      alert("Erro ao criar sessão: " + erro.message);
+    }
   };
-
-  useEffect(() => {
-    if (!sessionId) return;
-
-    const unsubscribe = listenPlayers(sessionId, setPlayers);
-
-    return () => unsubscribe();
-  }, [sessionId]);
 
   return (
     <div>
@@ -105,6 +127,28 @@ function DashboardProfessor() {
           </li>
         ))}
       </ul>
+
+      <h2>Quizzes</h2>
+
+      <button onClick={() => navigate("/criar-quiz")}>
+        Criar Quiz
+      </button>
+
+      <h3>Meus Quizzes</h3>
+
+      <ul>
+        {quizzes.map((quiz) => (
+          <li key={quiz.id}>
+            <button onClick={() => navigate(`/quiz/${quiz.id}`)}>
+              {quiz.nome}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {selectedQuiz && (
+        <p>Quiz selecionado: {selectedQuiz.nome}</p>
+      )}
 
       <h2>Iniciar Sessão</h2>
 

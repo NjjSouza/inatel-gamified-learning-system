@@ -6,6 +6,8 @@ import DashboardProfessor from "./pages/DashboardProfessor";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import CoursePage from "./pages/CoursePage";
 import JoinSession from "./pages/JoinSession";
+import CreateQuiz from "./pages/CreateQuiz";
+import EditQuiz from "./pages/EditQuiz";
 
 function App() {
   return (
@@ -63,6 +65,24 @@ function App() {
           element={
             <ProtectedRoute>
               <div>Você entrou na sessão</div>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/criar-quiz"
+          element={
+            <ProtectedRoute>
+              <CreateQuiz />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/quiz/:quizId"
+          element={
+            <ProtectedRoute>
+              <EditQuiz />
             </ProtectedRoute>
           }
         />
