@@ -1,19 +1,40 @@
+import { useAuth } from "../contexts/AuthContext";
 import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuizzes } from "../hooks/useQuizzes";
 
 export default function CreateQuiz() {
-  const { createQuiz } = useQuizzes();
+  const { user } = useAuth();
+  const { courseId } = useParams();
+  const navigate = useNavigate();
+
+  const { createQuiz, addQuestion } = useQuizzes();
 
   const [nome, setNome] = useState("");
   const [quizId, setQuizId] = useState(null);
   const [enunciado, setEnunciado] = useState("");
-  const [alternativas, setAlternativas] = useState(["", "", "", ""]);
+  const [alternativas, setAlternativas] = useState(["", "", "", "", ""]);
   const [correta, setCorreta] = useState(0);
 
+  useEffect(() => {
+    if (user?.tipo !== "professor") {
+      navigate("/");
+    }
+  }, [user]);
+
   const handleCreateQuiz = async () => {
-    const id = await createQuiz(nome);
-    setQuizId(id);
-    alert("Quiz criado! Agora adicione perguntas.");
+    try {
+      if (!nome) {
+        alert("Digite o nome do quiz");
+        return;
+      }
+
+      const quiz = await createQuiz(courseId, nome);
+      setQuizId(quiz.id);
+
+    } catch (erro) {
+      alert("Erro ao criar quiz: " + erro.message);
+    }
   };
 
   const handleAddQuestion = async () => {
@@ -22,16 +43,21 @@ export default function CreateQuiz() {
       return;
     }
 
+    if (!enunciado || alternativas.some(a => a === "")) {
+      alert("Preencha todos os campos!");
+      return;
+    }
+
     await addQuestion(quizId, {
-      enunciado,
+      pergunta: enunciado,
       alternativas,
-      correta,
+      respostaCorreta: correta,
     });
 
     alert("Pergunta adicionada!");
 
     setEnunciado("");
-    setAlternativas(["", "", "", ""]);
+    setAlternativas(["", "", "", "", ""]);
     setCorreta(0);
   };
 
@@ -68,31 +94,34 @@ export default function CreateQuiz() {
           />
 
           {alternativas.map((alt, index) => (
-            <input
-              key={index}
-              placeholder={`Alternativa ${index + 1}`}
-              value={alt}
-              onChange={(e) =>
-                handleAlternativaChange(index, e.target.value)
-              }
-          />
-        ))}
+            <div key={index}>
+              <input
+                placeholder={`Alternativa ${index + 1}`}
+                value={alt}
+                onChange={(e) =>
+                  handleAlternativaChange(index, e.target.value)
+                }
+              />
 
-        <select
-          value={correta}
-          onChange={(e) => setCorreta(Number(e.target.value))}
-        >
-          <option value={0}>Alternativa 1</option>
-          <option value={1}>Alternativa 2</option>
-          <option value={2}>Alternativa 3</option>
-          <option value={3}>Alternativa 4</option>
-        </select>
+              <input
+                type="radio"
+                name="correta"
+                checked={correta === index}
+                onChange={() => setCorreta(index)}
+              />
+              Correta
+            </div>
+          ))}
 
-        <button onClick={handleAddQuestion}>
-          Adicionar Pergunta
-        </button>
-      </>
-    )}
-  </div>
+          <button onClick={handleAddQuestion}>
+            Adicionar Pergunta
+          </button>
+
+          <button onClick={() => navigate(-1)}>
+            Voltar
+          </button>
+        </>
+      )}
+    </div>
   );
 }

@@ -11,12 +11,13 @@ import { useAuth } from "../contexts/AuthContext";
 export function useSessions() {
   const { user } = useAuth();
 
-  const createSession = async (quizId) => {
+  const createSession = async (quizId, courseId) => {
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
     const docRef = await addDoc(collection(db, "sessions"), {
       professorId: user.uid,
       quizId,
+      courseId,
       pin,
       status: "waiting",
       createdAt: new Date(),
@@ -88,11 +89,26 @@ export function useSessions() {
     }));
   };
 
+  const getSessionsByCourse = async (courseId) => {
+    const q = query(
+      collection(db, "sessions"),
+      where("courseId", "==", courseId)
+    );
+
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  };
+
   return {
     createSession,
     getSessionByPin,
     joinSession,
     listenPlayers,
-    getSessions 
+    getSessions,
+    getSessionsByCourse
   };
 }

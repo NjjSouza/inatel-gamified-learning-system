@@ -8,6 +8,8 @@ import CoursePage from "./pages/CoursePage";
 import JoinSession from "./pages/JoinSession";
 import CreateQuiz from "./pages/CreateQuiz";
 import EditQuiz from "./pages/EditQuiz";
+import Register from "./pages/Register";
+import CourseQuizzes from "./pages/CourseQuizzes";
 
 function App() {
   return (
@@ -60,6 +62,8 @@ function App() {
           }
         />
 
+        <Route path="/registrar" element={<Register />} />
+
         <Route
           path="/aluno/sessao/:sessionId"
           element={
@@ -70,7 +74,7 @@ function App() {
         />
 
         <Route
-          path="/criar-quiz"
+          path="/criar-quiz/:courseId"
           element={
             <ProtectedRoute>
               <CreateQuiz />
@@ -83,6 +87,15 @@ function App() {
           element={
             <ProtectedRoute>
               <EditQuiz />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/professor/curso/:courseId/quizzes"
+          element={
+            <ProtectedRoute>
+              <CourseQuizzes />
             </ProtectedRoute>
           }
         />

@@ -1,22 +1,28 @@
 import { db } from "../services/firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 
 export function useQuizzes() {
   const { user } = useAuth();
 
-  const createQuiz = async (nome) => {
+  const createQuiz = async (courseId, nome) => {
     const docRef = await addDoc(collection(db, "quizzes"), {
       nome,
+      courseId,
       professorId: user.uid,
-      criadoEm: new Date(),
+      createdAt: new Date(),
     });
 
-    return docRef.id;
+    return { id: docRef.id };
   };
 
-  const getQuizzes = async () => {
-    const snapshot = await getDocs(collection(db, "quizzes"));
+  const getQuizzes = async (courseId) => {
+    const q = query(
+      collection(db, "quizzes"),
+      where("courseId", "==", courseId)
+    );
+
+    const snapshot = await getDocs(q);
 
     return snapshot.docs.map(doc => ({
       id: doc.id,

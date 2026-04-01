@@ -8,19 +8,15 @@ import { useQuizzes } from "../hooks/useQuizzes";
 function DashboardProfessor() {
   const { user, logout } = useAuth();
   const { createCourse, getCourses } = useCourses();
-  const { createSession, listenPlayers, getSessions } = useSessions();
-  const { getQuizzes } = useQuizzes();
+  const { listenPlayers } = useSessions();
 
   const navigate = useNavigate();
 
   const [nomeCurso, setNomeCurso] = useState("");
   const [courses, setCourses] = useState([]);
-  const [sessions, setSessions] = useState([]);
   const [sessionId, setSessionId] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
   const [players, setPlayers] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
-  const [selectedQuiz, setSelectedQuiz] = useState(null);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -29,24 +25,6 @@ function DashboardProfessor() {
     };
 
     fetchCourses();
-  }, []);
-
-  useEffect(() => {
-    const fetchSessions = async () => {
-      const data = await getSessions();
-      setSessions(data);
-    };
-
-    fetchSessions();
-  }, []);
-
-  useEffect(() => {
-    const fetchQuizzes = async () => {
-      const data = await getQuizzes();
-      setQuizzes(data);
-    };
-
-    fetchQuizzes();
   }, []);
 
   useEffect(() => {
@@ -70,29 +48,8 @@ function DashboardProfessor() {
   };
 
   const handleSelect = (course) => {
-    navigate(`/professor/curso/${course.id}`);
-  };
-
-  const handleStartSession = async () => {
-    try {
-      if (!selectedQuiz) {
-        alert("Selecione um quiz primeiro!");
-        return;
-      }
-
-      const session = await createSession(selectedQuiz.id);
-
-      setSessionId(session.id);
-      setSelectedSession(session);
-      setPlayers([]);
-
-      const updatedSessions = await getSessions();
-      setSessions(updatedSessions);
-
-    } catch (erro) {
-      alert("Erro ao criar sessão: " + erro.message);
-    }
-  };
+    navigate(`/professor/curso/${course.id}`)
+  }
 
   return (
     <div>
@@ -128,51 +85,9 @@ function DashboardProfessor() {
         ))}
       </ul>
 
-      <h2>Quizzes</h2>
-
-      <button onClick={() => navigate("/criar-quiz")}>
-        Criar Quiz
-      </button>
-
-      <h3>Meus Quizzes</h3>
-
-      <ul>
-        {quizzes.map((quiz) => (
-          <li key={quiz.id}>
-            <button onClick={() => navigate(`/quiz/${quiz.id}`)}>
-              {quiz.nome}
-            </button>
-          </li>
-        ))}
-      </ul>
-
       {selectedQuiz && (
         <p>Quiz selecionado: {selectedQuiz.nome}</p>
       )}
-
-      <h2>Iniciar Sessão</h2>
-
-      <button onClick={handleStartSession}>
-        Criar Sessão
-      </button>
-
-      <h2>Minhas Sessões</h2>
-
-      <ul>
-        {sessions.map((session) => (
-          <li key={session.id}>
-            <button
-              onClick={() => {
-                console.log("Sessão clicada:", session.id);
-                setSessionId(session.id);
-                setSelectedSession(session);
-              }}
-            >
-              PIN: {session.pin} ({session.status})
-            </button>
-          </li>
-        ))}
-      </ul>
 
       {sessionId && (
         <div>
