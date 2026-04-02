@@ -4,12 +4,14 @@ import Login from "./pages/Login";
 import DashboardAluno from "./pages/DashboardAluno";
 import DashboardProfessor from "./pages/DashboardProfessor";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import CoursePage from "./pages/CoursePage";
+import CoursePageProfessor from "./pages/CoursePageProfessor";
+import CoursePageAluno from "./pages/CoursePageAluno";
 import JoinSession from "./pages/JoinSession";
 import CreateQuiz from "./pages/CreateQuiz";
 import EditQuiz from "./pages/EditQuiz";
 import Register from "./pages/Register";
 import CourseQuizzes from "./pages/CourseQuizzes";
+import SessionPlayer from "./pages/SessionPlayer";
 
 function App() {
   return (
@@ -39,7 +41,7 @@ function App() {
           path="/professor/curso/:courseId"
           element={
             <ProtectedRoute>
-              <CoursePage />
+              <CoursePageProfessor />
             </ProtectedRoute>
           }
         />
@@ -48,7 +50,7 @@ function App() {
           path="/aluno/curso/:courseId"
           element={
             <ProtectedRoute>
-              <CoursePage />
+              <CoursePageAluno />
             </ProtectedRoute>
           }
         />
@@ -57,18 +59,25 @@ function App() {
           path="/entrar"
           element={
             <ProtectedRoute>
-              <JoinSession/>
+              <JoinSession />
             </ProtectedRoute>
           }
         />
 
-        <Route path="/registrar" element={<Register />} />
+        <Route
+          path="/registrar"
+          element={
+            <ProtectedRoute>
+              <Register />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/aluno/sessao/:sessionId"
           element={
             <ProtectedRoute>
-              <div>Você entrou na sessão</div>
+              <SessionPlayer />
             </ProtectedRoute>
           }
         />
@@ -83,7 +92,7 @@ function App() {
         />
 
         <Route
-          path="/quiz/:quizId"
+          path="/professor/quiz/:quizId"
           element={
             <ProtectedRoute>
               <EditQuiz />

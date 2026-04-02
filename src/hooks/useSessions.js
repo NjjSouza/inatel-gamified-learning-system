@@ -1,17 +1,19 @@
 import { db } from "../services/firebase";
-import {collection,
-  addDoc,
-  query,
-  where,
-  onSnapshot,
-  getDocs
-} from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 
 export function useSessions() {
   const { user } = useAuth();
 
   const createSession = async (quizId, courseId) => {
+    if (!user) {
+      throw new Error("Usuário não autenticado");
+    }
+
+    if (!quizId || !courseId) {
+      throw new Error("Dados inválidos para criar sessão");
+    }
+
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
     const docRef = await addDoc(collection(db, "sessions"), {
@@ -103,12 +105,38 @@ export function useSessions() {
     }));
   };
 
+  const startSession = async (sessionId) => {
+    const docRef = doc(db, "sessions", sessionId);
+
+    await updateDoc(docRef, {
+      status: "playing",
+    });
+  };
+
+  const listenSessionsByCourse = (courseId, callback) => {
+    const q = query(
+      collection(db, "sessions"),
+      where("courseId", "==", courseId)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const sessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      callback(sessions);
+    });
+  };
+
   return {
     createSession,
     getSessionByPin,
     joinSession,
     listenPlayers,
     getSessions,
-    getSessionsByCourse
+    getSessionsByCourse,
+    startSession,
+    listenSessionsByCourse
   };
 }

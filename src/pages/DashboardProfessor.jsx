@@ -85,10 +85,6 @@ function DashboardProfessor() {
         ))}
       </ul>
 
-      {selectedQuiz && (
-        <p>Quiz selecionado: {selectedQuiz.nome}</p>
-      )}
-
       {sessionId && (
         <div>
           <p>

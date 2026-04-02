@@ -33,7 +33,7 @@ export default function CourseQuizzes() {
       <ul>
         {quizzes.map(q => (
           <li key={q.id}>
-            <button onClick={() => navigate(`/quiz/${q.id}`)}>
+            <button onClick={() => navigate(`/professor/quiz/${q.id}`)}>
               {q.nome}
             </button>
           </li>
