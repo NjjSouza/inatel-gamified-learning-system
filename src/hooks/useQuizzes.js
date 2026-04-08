@@ -1,5 +1,5 @@
 import { db } from "../services/firebase";
-import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, addDoc, getDocs, deleteDoc, query, where } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 
 export function useQuizzes() {
@@ -48,5 +48,9 @@ export function useQuizzes() {
     }));
   };
 
-  return { createQuiz, getQuizzes, addQuestion, getQuestions };
+  const deleteQuiz = async (quizId) => {
+    await deleteDoc(doc(db, "quizzes", quizId));
+  };
+
+  return { createQuiz, getQuizzes, addQuestion, getQuestions, deleteQuiz };
 }

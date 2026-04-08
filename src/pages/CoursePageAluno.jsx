@@ -40,8 +40,6 @@ export default function CoursePageAluno() {
 
   return (
     <div>
-      <button onClick={() => navigate(-1)}>Voltar</button>
-
       <h1>{course.nome}</h1>
       <p>Professor: {professor?.nome || professor?.email}</p>
 

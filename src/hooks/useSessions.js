@@ -1,18 +1,15 @@
 import { db } from "../services/firebase";
-import { collection, doc, addDoc, updateDoc, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, query, where, onSnapshot, getDocs, increment } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
+import { useQuizzes } from "./useQuizzes";
 
 export function useSessions() {
   const { user } = useAuth();
+  const { getQuestions } = useQuizzes(); 
 
   const createSession = async (quizId, courseId) => {
-    if (!user) {
-      throw new Error("Usuário não autenticado");
-    }
-
-    if (!quizId || !courseId) {
-      throw new Error("Dados inválidos para criar sessão");
-    }
+    if (!user) throw new Error("Usuário não autenticado");
+    if (!quizId || !courseId) throw new Error("Dados inválidos");
 
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -22,6 +19,7 @@ export function useSessions() {
       courseId,
       pin,
       status: "waiting",
+      currentQuestionIndex: 0,
       createdAt: new Date(),
     });
 
@@ -36,15 +34,13 @@ export function useSessions() {
 
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) {
-      return null;
-    }
+    if (snapshot.empty) return null;
 
-    const doc = snapshot.docs[0];
+    const docSnap = snapshot.docs[0];
 
     return {
-      id: doc.id,
-      ...doc.data(),
+      id: docSnap.id,
+      ...docSnap.data(),
     };
   };
 
@@ -52,10 +48,11 @@ export function useSessions() {
     if (!user) return;
 
     await addDoc(collection(db, "session_players"), {
-      sessionId: sessionId,
+      sessionId,
       userId: user.uid,
       nome: user.nome || user.email,
       score: 0,
+      answers: {},
     });
   };
 
@@ -105,14 +102,6 @@ export function useSessions() {
     }));
   };
 
-  const startSession = async (sessionId) => {
-    const docRef = doc(db, "sessions", sessionId);
-
-    await updateDoc(docRef, {
-      status: "playing",
-    });
-  };
-
   const listenSessionsByCourse = (courseId, callback) => {
     const q = query(
       collection(db, "sessions"),
@@ -129,6 +118,50 @@ export function useSessions() {
     });
   };
 
+  const startSession = async (sessionId) => {
+    await updateDoc(doc(db, "sessions", sessionId), {
+      status: "playing",
+      currentQuestionIndex: 0,
+    });
+  };
+
+  const finishSession = async (sessionId) => {
+    await updateDoc(doc(db, "sessions", sessionId), {
+      status: "finished",
+    });
+  };
+
+  const nextQuestion = async (sessionId, currentIndex, totalQuestions) => {
+    if (currentIndex + 1 >= totalQuestions) {
+      console.warn("Última pergunta atingida");
+      return;
+    }
+
+    await updateDoc(doc(db, "sessions", sessionId), {
+      currentQuestionIndex: currentIndex + 1,
+    });
+  };
+
+  const submitAnswer = async (playerId, questionIndex, answerIndex, quizId) => {
+    if (!playerId || !quizId) return false;
+
+    const questions = await getQuestions(quizId);
+    const question = questions[questionIndex];
+
+    if (!question) return false;
+
+    const acertou = question.respostaCorreta === answerIndex;
+
+    const playerRef = doc(db, "session_players", playerId);
+
+    await updateDoc(playerRef, {
+      [`answers.${questionIndex}`]: answerIndex,
+      score: acertou ? increment(10) : increment(0),
+    });
+
+    return acertou;
+  };
+
   return {
     createSession,
     getSessionByPin,
@@ -136,7 +169,10 @@ export function useSessions() {
     listenPlayers,
     getSessions,
     getSessionsByCourse,
+    listenSessionsByCourse,
     startSession,
-    listenSessionsByCourse
+    finishSession,
+    nextQuestion,
+    submitAnswer,
   };
 }
