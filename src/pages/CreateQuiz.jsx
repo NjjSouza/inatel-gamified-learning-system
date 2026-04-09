@@ -23,29 +23,15 @@ export default function CreateQuiz() {
   }, [user]);
 
   const handleCreateQuiz = async () => {
-    try {
-      if (!nome) {
-        alert("Digite o nome do quiz");
-        return;
-      }
+    if (!nome) return alert("Digite o nome");
 
-      const quiz = await createQuiz(courseId, nome);
-      setQuizId(quiz.id);
-
-    } catch (erro) {
-      alert("Erro ao criar quiz: " + erro.message);
-    }
+    const quiz = await createQuiz(courseId, nome);
+    setQuizId(quiz.id);
   };
 
   const handleAddQuestion = async () => {
-    if (!quizId) {
-      alert("Crie o quiz primeiro!");
-      return;
-    }
-
     if (!enunciado || alternativas.some(a => a === "")) {
-      alert("Preencha todos os campos!");
-      return;
+      return alert("Preencha tudo!");
     }
 
     await addQuestion(quizId, {
@@ -61,14 +47,8 @@ export default function CreateQuiz() {
     setCorreta(0);
   };
 
-  const handleAlternativaChange = (index, value) => {
-    const novas = [...alternativas];
-    novas[index] = value;
-    setAlternativas(novas);
-  };
-
   return (
-    <div>
+    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
       <h1>Criar Quiz</h1>
 
       {!quizId ? (
@@ -77,10 +57,11 @@ export default function CreateQuiz() {
             placeholder="Nome do quiz"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
+            style={{ padding: "10px", width: "100%", marginBottom: "10px" }}
           />
 
-          <button onClick={handleCreateQuiz}>
-            Criar Quiz
+          <button onClick={handleCreateQuiz} style={{ padding: "10px 20px" }}>
+            Criar
           </button>
         </>
       ) : (
@@ -91,31 +72,37 @@ export default function CreateQuiz() {
             placeholder="Enunciado"
             value={enunciado}
             onChange={(e) => setEnunciado(e.target.value)}
+            style={{ padding: "10px", width: "100%", marginBottom: "10px" }}
           />
 
           {alternativas.map((alt, index) => (
-            <div key={index}>
+            <div key={index} style={{ marginBottom: "8px" }}>
               <input
                 placeholder={`Alternativa ${index + 1}`}
                 value={alt}
-                onChange={(e) =>
-                  handleAlternativaChange(index, e.target.value)
-                }
+                onChange={(e) => {
+                  const novas = [...alternativas];
+                  novas[index] = e.target.value;
+                  setAlternativas(novas);
+                }}
+                style={{ padding: "8px", width: "70%" }}
               />
 
               <input
                 type="radio"
-                name="correta"
                 checked={correta === index}
                 onChange={() => setCorreta(index)}
+                style={{ marginLeft: "10px" }}
               />
               Correta
             </div>
           ))}
 
-          <button onClick={handleAddQuestion}>
-            Adicionar Pergunta
+          <button onClick={handleAddQuestion} style={{ padding: "10px 20px" }}>
+            Adicionar
           </button>
+
+          <br /><br />
 
           <button onClick={() => navigate(-1)}>
             Voltar

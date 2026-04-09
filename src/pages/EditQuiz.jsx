@@ -27,11 +27,6 @@ export default function EditQuiz() {
         return;
       }
 
-      if (alternativas.filter(a => a !== "").length < 2) {
-        alert("Adicione pelo menos 2 alternativas");
-        return;
-      }
-
       await addQuestion(quizId, {
         pergunta,
         alternativas,
@@ -52,59 +47,67 @@ export default function EditQuiz() {
   };
 
   return (
-    <div>
+    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
       <h1>Editar Quiz</h1>
 
-      <p>ID do quiz: {quizId}</p>
+      <div style={{ marginTop: "20px" }}>
+        <input
+          type="text"
+          placeholder="Pergunta"
+          value={pergunta}
+          onChange={(e) => setPergunta(e.target.value)}
+          style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
+        />
 
-      <h2>Adicionar Pergunta</h2>
+        {alternativas.map((alt, index) => (
+          <div key={index} style={{ marginBottom: "8px" }}>
+            <input
+              type="text"
+              placeholder={`Alternativa ${index + 1}`}
+              value={alt}
+              onChange={(e) => {
+                const novas = [...alternativas];
+                novas[index] = e.target.value;
+                setAlternativas(novas);
+              }}
+              style={{ padding: "8px", width: "70%" }}
+            />
 
-      <input
-        type="text"
-        placeholder="Pergunta"
-        value={pergunta}
-        onChange={(e) => setPergunta(e.target.value)}
-      />
+            <input
+              type="radio"
+              name="correta"
+              checked={correta === index}
+              onChange={() => setCorreta(index)}
+              style={{ marginLeft: "10px" }}
+            />
+            Correta
+          </div>
+        ))}
 
-      {alternativas.map((alt, index) => (
-        <div key={index}>
-          <input
-            type="text"
-            placeholder={`Alternativa ${index + 1}`}
-            value={alt}
-            onChange={(e) => {
-              const novas = [...alternativas];
-              novas[index] = e.target.value;
-              setAlternativas(novas);
-            }}
-          />
+        <button onClick={handleAdd} style={{ padding: "10px 20px" }}>
+          Adicionar Pergunta
+        </button>
+      </div>
 
-          <input
-            type="radio"
-            name="correta"
-            checked={correta === index}
-            onChange={() => setCorreta(index)}
-          />
-          Correta
-        </div>
-      ))}
-
-      <button onClick={handleAdd}>
-        Adicionar
-      </button>
-
-      <h2>Perguntas do Quiz</h2>
+      <h2 style={{ marginTop: "30px" }}>Perguntas</h2>
 
       {questions.length === 0 ? (
         <p>Nenhuma pergunta ainda</p>
       ) : (
-        <ul>
+        <ul style={{ padding: 0 }}>
           {questions.map((q) => (
-            <li key={q.id}>
+            <li key={q.id} style={{
+              listStyle: "none",
+              marginBottom: "15px",
+              padding: "15px",
+              border: "1px solid #ccc",
+              borderRadius: "10px",
+              textAlign: "left"
+            }}>
               <strong>{q.pergunta}</strong>
 
               <ul>
-                {(q.alternativas || []).map((alt, i) => (
+                {q.alternativas.map((alt, i) => (
                   <li key={i}>
                     {alt} {i === q.respostaCorreta && <strong>(Correta)</strong>}
                   </li>

@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 
 export default function JoinSession() {
   const { getSessionByPin, joinSession } = useSessions();
-
   const navigate = useNavigate();
 
   const [pin, setPin] = useState("");
@@ -20,27 +19,32 @@ export default function JoinSession() {
       return;
     }
 
-    await joinSession(session.id); 
-
+    await joinSession(session.id);
     navigate(`/aluno/sessao/${session.id}`);
   };
 
   return (
-    <div>
-      <h1>Entrar na sessão</h1>
+    <div style={{
+      padding: "20px",
+      maxWidth: "400px",
+      margin: "0 auto",
+      textAlign: "center"
+    }}>
+      <h1>Entrar na Sessão</h1>
 
       <input
         type="text"
         placeholder="Digite o PIN"
         value={pin}
         onChange={(e) => setPin(e.target.value)}
+        style={{ padding: "10px", width: "100%", marginBottom: "10px" }}
       />
 
-      <button onClick={handleJoin}>
+      <button onClick={handleJoin} style={{ padding: "10px 20px" }}>
         Entrar
       </button>
 
-      {error && <p>{error}</p>}
+      {error && <p style={{ color: "red", marginTop: "10px" }}>{error}</p>}
     </div>
   );
 }

@@ -39,29 +39,73 @@ export default function CoursePageAluno() {
   if (!course) return <p>Carregando...</p>;
 
   return (
-    <div>
-      <h1>{course.nome}</h1>
-      <p>Professor: {professor?.nome || professor?.email}</p>
+    <div style={container}>
+      <div style={header}>
+        <h1>{course.nome}</h1>
+        <p>Professor: {professor?.nome || professor?.email}</p>
+      </div>
 
-      <h2>Sessões disponíveis</h2>
+      <div style={card}>
+        <h2>Sessões disponíveis</h2>
 
-      {sessions.length === 0 ? (
-        <p>Nenhuma sessão ativa</p>
-      ) : (
-        <ul>
-          {sessions.map((s) => (
-            <li key={s.id}>
-              PIN: {s.pin} - {s.status}
+        {sessions.length === 0 ? (
+          <p>Nenhuma sessão ativa</p>
+        ) : (
+          sessions.map((s) => (
+            <div key={s.id} style={sessionCard}>
+              <p><strong>PIN:</strong> {s.pin}</p>
+              <p>Status: {s.status}</p>
 
               {s.status === "playing" && (
-                <button onClick={() => navigate(`/aluno/sessao/${s.id}`)}>
+                <button
+                  onClick={() => navigate(`/aluno/sessao/${s.id}`)}
+                  style={buttonPrimary}
+                >
                   Entrar
                 </button>
               )}
-            </li>
-          ))}
-        </ul>
-      )}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
+
+const container = {
+  minHeight: "100vh",
+  background: "#f5f5f5",
+  padding: "30px"
+};
+
+const header = {
+  textAlign: "center",
+  marginBottom: "30px"
+};
+
+const card = {
+  maxWidth: "600px",
+  margin: "0 auto",
+  padding: "20px",
+  background: "#fff",
+  borderRadius: "10px",
+  boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+  textAlign: "center"
+};
+
+const sessionCard = {
+  border: "1px solid #ccc",
+  borderRadius: "10px",
+  padding: "15px",
+  marginBottom: "10px"
+};
+
+const buttonPrimary = {
+  padding: "10px",
+  borderRadius: "8px",
+  border: "none",
+  background: "#4CAF50",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: "bold"
+};

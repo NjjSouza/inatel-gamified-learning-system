@@ -43,23 +43,35 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signup = async (email, senha, tipo, nome) => {
-    const credenciais = await createUserWithEmailAndPassword(auth, email, senha);
-    const user = credenciais.user;
+    try {
+      const credenciais = await createUserWithEmailAndPassword(auth, email, senha);
+      const user = credenciais.user;
 
-    await setDoc(doc(db, "usuarios", user.uid), {
-      nome: nome || "Usuário",
-      email: user.email,
-      tipo: tipo,
-      criadoEm: new Date(),
-    });
+      await setDoc(doc(db, "usuarios", user.uid), {
+        nome: nome || "Usuário",
+        email: user.email,
+        tipo: tipo,
+        criadoEm: new Date(),
+      });
+    } catch (erro) {
+      throw erro; 
+    }
   };
 
   const login = async (email, senha) => {
-    await signInWithEmailAndPassword(auth, email, senha);
+    try {
+      await signInWithEmailAndPassword(auth, email, senha);
+    } catch (erro) {
+      throw erro;
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (erro) {
+      throw erro;
+    }
   };
 
   const value = {
