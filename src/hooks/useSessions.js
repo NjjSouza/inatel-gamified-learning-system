@@ -47,6 +47,14 @@ export function useSessions() {
   const joinSession = async (sessionId) => {
     if (!user) return;
 
+    const q = query(
+      collection(db, "session_players"),
+      where("sessionId", "==", sessionId),
+      where("userId", "==", user.uid)
+    );
+    const existing = await getDocs(q);
+    if (!existing.empty) return;
+
     await addDoc(collection(db, "session_players"), {
       sessionId,
       userId: user.uid,
@@ -142,24 +150,17 @@ export function useSessions() {
     });
   };
 
-  const submitAnswer = async (playerId, questionIndex, answerIndex, quizId) => {
-    if (!playerId || !quizId) return false;
-
-    const questions = await getQuestions(quizId);
-    const question = questions[questionIndex];
-
-    if (!question) return false;
-
-    const acertou = question.respostaCorreta === answerIndex;
+  const submitAnswer = async (playerId, questionIndex, answerIndex, isCorrect) => {
+    if (!playerId) return false;
 
     const playerRef = doc(db, "session_players", playerId);
 
     await updateDoc(playerRef, {
       [`answers.${questionIndex}`]: answerIndex,
-      score: acertou ? increment(10) : increment(0),
+      score: isCorrect ? increment(10) : increment(0),
     });
 
-    return acertou;
+    return isCorrect;
   };
 
   return {

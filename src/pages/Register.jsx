@@ -24,7 +24,8 @@ export default function Register() {
       await signup(email, senha, tipo, nome);
       navigate("/");
     } catch (err) {
-      setErro("Erro ao criar conta");
+      console.error(err); 
+      setErro(err.message);
     }
   };
 

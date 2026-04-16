@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; 
 import { useParams, useNavigate } from "react-router-dom";
 import { useCourses } from "../hooks/useCourses";
 import { useSessions } from "../hooks/useSessions";
@@ -114,9 +114,11 @@ function CoursePageProfessor() {
           </p>
         )}
 
-        <button onClick={handleCreateSession} style={buttonPrimary}>
-          Criar Sessão
-        </button>
+        {selectedQuiz && (
+          <button onClick={handleCreateSession} style={buttonPrimary}>
+            Criar Sessão
+          </button>
+        )}
       </div>
 
       <div style={card}>
@@ -127,7 +129,12 @@ function CoursePageProfessor() {
         ) : (
           sessions.map((s) => {
             const total = questionsCount[s.quizId] || 0;
-            const current = (s.currentQuestionIndex ?? -1) + 1;
+
+            // ✅ proteção visual
+            const current = Math.min(
+              (s.currentQuestionIndex ?? 0) + 1,
+              total
+            );
 
             return (
               <div key={s.id} style={sessionCard}>
@@ -148,7 +155,14 @@ function CoursePageProfessor() {
                   {s.status === "playing" && (
                     <>
                       <button
-                        onClick={() => nextQuestion(s.id, s.currentQuestionIndex || 0)}
+                        onClick={() =>
+                          nextQuestion(
+                            s.id,
+                            s.currentQuestionIndex || 0,
+                            total
+                          )
+                        }
+                        disabled={(s.currentQuestionIndex ?? 0) >= total - 1}
                         style={buttonPrimary}
                       >
                         Próxima

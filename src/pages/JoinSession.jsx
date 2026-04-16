@@ -19,6 +19,11 @@ export default function JoinSession() {
       return;
     }
 
+    if (session.status === "finished") {
+      setError("Esta sessão já foi encerrada");
+      return;
+    }
+
     await joinSession(session.id);
     navigate(`/aluno/sessao/${session.id}`);
   };
