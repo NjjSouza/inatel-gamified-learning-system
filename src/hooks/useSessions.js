@@ -7,9 +7,9 @@ export function useSessions() {
   const { user } = useAuth();
   const { getQuestions } = useQuizzes(); 
 
-  const createSession = async (quizId, courseId) => {
+  const createSession = async (quizId, courseId, classId) => {
     if (!user) throw new Error("Usuário não autenticado");
-    if (!quizId || !courseId) throw new Error("Dados inválidos");
+    if (!quizId || !courseId || !classId) throw new Error("Dados inválidos");
 
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -17,6 +17,7 @@ export function useSessions() {
       professorId: user.uid,
       quizId,
       courseId,
+      classId,
       pin,
       status: "waiting",
       currentQuestionIndex: 0,

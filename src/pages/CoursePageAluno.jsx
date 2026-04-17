@@ -2,22 +2,27 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useCourses } from "../hooks/useCourses";
 import { useSessions } from "../hooks/useSessions";
+import { useClasses } from "../hooks/useClasses";
+import { useAuth } from "../contexts/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 
 export default function CoursePageAluno() {
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { getCourseById } = useCourses();
   const { listenSessionsByCourse } = useSessions();
+  const { getEnrolledClassIds } = useClasses();
 
   const [course, setCourse] = useState(null);
   const [professor, setProfessor] = useState(null);
   const [sessions, setSessions] = useState([]);
+  const [enrolledClassIds, setEnrolledClassIds] = useState([]);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       const data = await getCourseById(courseId);
       setCourse(data);
 
@@ -26,15 +31,24 @@ export default function CoursePageAluno() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) setProfessor(docSnap.data());
       }
+
+      if (user) {
+        const classIds = await getEnrolledClassIds(user.uid);
+        setEnrolledClassIds(classIds);
+      }
     };
 
-    fetch();
-  }, [courseId]);
+    fetchData();
+  }, [courseId, user]);
 
   useEffect(() => {
     const unsubscribe = listenSessionsByCourse(courseId, setSessions);
     return () => unsubscribe();
   }, [courseId]);
+
+  const visibleSessions = sessions.filter(
+    (s) => s.classId && enrolledClassIds.includes(s.classId)
+  );
 
   if (!course) return <p>Carregando...</p>;
 
@@ -48,10 +62,10 @@ export default function CoursePageAluno() {
       <div style={card}>
         <h2>Sessões disponíveis</h2>
 
-        {sessions.length === 0 ? (
-          <p>Nenhuma sessão ativa</p>
+        {visibleSessions.length === 0 ? (
+          <p>Nenhuma sessão ativa para sua turma</p>
         ) : (
-          sessions.map((s) => (
+          visibleSessions.map((s) => (
             <div key={s.id} style={sessionCard}>
               <p><strong>PIN:</strong> {s.pin}</p>
               <p>Status: {s.status}</p>
@@ -72,40 +86,18 @@ export default function CoursePageAluno() {
   );
 }
 
-const container = {
-  minHeight: "100vh",
-  background: "#f5f5f5",
-  padding: "30px"
-};
-
-const header = {
-  textAlign: "center",
-  marginBottom: "30px"
-};
-
+const container = { minHeight: "100vh", background: "#f5f5f5", padding: "30px" };
+const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
-  maxWidth: "600px",
-  margin: "0 auto",
-  padding: "20px",
-  background: "#fff",
-  borderRadius: "10px",
-  boxShadow: "0 0 10px rgba(0,0,0,0.1)",
-  textAlign: "center"
+  maxWidth: "600px", margin: "0 auto", padding: "20px",
+  background: "#fff", borderRadius: "10px",
+  boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
 };
-
 const sessionCard = {
-  border: "1px solid #ccc",
-  borderRadius: "10px",
-  padding: "15px",
-  marginBottom: "10px"
+  border: "1px solid #ccc", borderRadius: "10px",
+  padding: "15px", marginBottom: "10px"
 };
-
 const buttonPrimary = {
-  padding: "10px",
-  borderRadius: "8px",
-  border: "none",
-  background: "#4CAF50",
-  color: "#fff",
-  cursor: "pointer",
-  fontWeight: "bold"
+  padding: "10px", borderRadius: "8px", border: "none",
+  background: "#4CAF50", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };

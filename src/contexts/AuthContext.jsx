@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../services/firebase";
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -21,11 +20,27 @@ export function AuthProvider({ children }) {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setUser({
+          const userData = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             ...docSnap.data(),
-          });
+          };
+          setUser(userData);
+
+          if (userData.tipo === "aluno") {
+            const pendentes = await getDocs(query(
+              collection(db, "enrollments"),
+              where("email", "==", firebaseUser.email.toLowerCase()),
+              where("userId", "==", null)
+            ));
+            const updates = pendentes.docs.map((d) =>
+              updateDoc(doc(db, "enrollments", d.id), {
+                userId: firebaseUser.uid,
+                nome: userData.nome || "",
+              })
+            );
+            await Promise.all(updates);
+          }
         } else {
           setUser({
             uid: firebaseUser.uid,
@@ -43,43 +58,26 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signup = async (email, senha, tipo, nome) => {
-    try {
-      const credenciais = await createUserWithEmailAndPassword(auth, email, senha);
-      const user = credenciais.user;
+    const credenciais = await createUserWithEmailAndPassword(auth, email, senha);
+    const newUser = credenciais.user;
 
-      await setDoc(doc(db, "usuarios", user.uid), {
-        nome: nome || "Usuário",
-        email: user.email,
-        tipo: tipo,
-        criadoEm: new Date(),
-      });
-    } catch (erro) {
-      throw erro; 
-    }
+    await setDoc(doc(db, "usuarios", newUser.uid), {
+      nome: nome || "Usuário",
+      email: newUser.email,
+      tipo: tipo,
+      criadoEm: new Date(),
+    });
   };
 
   const login = async (email, senha) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, senha);
-    } catch (erro) {
-      throw erro;
-    }
+    await signInWithEmailAndPassword(auth, email, senha);
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (erro) {
-      throw erro;
-    }
+    await signOut(auth);
   };
 
-  const value = {
-    user,
-    signup,
-    login,
-    logout,
-  };
+  const value = { user, signup, login, logout };
 
   return (
     <AuthContext.Provider value={value}>
