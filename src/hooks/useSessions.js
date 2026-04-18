@@ -151,15 +151,36 @@ export function useSessions() {
     });
   };
 
-  const submitAnswer = async (playerId, questionIndex, answerIndex, isCorrect) => {
+  const submitAnswer = async (playerId, sessionId, questionId, answerIndex, isCorrect, userId, classId) => {
     if (!playerId) return false;
 
-    const playerRef = doc(db, "session_players", playerId);
+    await addDoc(collection(db, "session_answers"), {
+      sessionId,
+      questionId,
+      userId,
+      answerIndex,
+      isCorrect,
+      xp: isCorrect ? 10 : 0,
+      answeredAt: new Date(),
+    });
 
+    const playerRef = doc(db, "session_players", playerId);
     await updateDoc(playerRef, {
-      [`answers.${questionIndex}`]: answerIndex,
       score: isCorrect ? increment(10) : increment(0),
     });
+
+    if (isCorrect && userId && classId) {
+      const xpRef = collection(db, "xp");
+      await addDoc(xpRef, {
+        userId,
+        classId,
+        amount: 10,
+        reason: "correct_answer",
+        sessionId,
+        questionId,
+        createdAt: new Date(),
+      });
+    }
 
     return isCorrect;
   };

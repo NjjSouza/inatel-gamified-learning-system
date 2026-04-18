@@ -94,16 +94,19 @@ export default function SessionPlayer() {
               disabled={answered}
               onClick={async () => {
                 if (!playerId) return;
-                
+
                 const isCorrect = current.respostaCorreta === index;
-                
+
                 await submitAnswer(
                   playerId,
-                  session.currentQuestionIndex,
+                  sessionId,
+                  current.id,
                   index,
-                  isCorrect
+                  isCorrect,
+                  user.uid,
+                  session.classId
                 );
-                
+
                 setAnswered(true);
               }}
               style={buttonPrimary}
