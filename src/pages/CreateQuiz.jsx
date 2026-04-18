@@ -5,7 +5,6 @@ import { useQuizzes } from "../hooks/useQuizzes";
 
 export default function CreateQuiz() {
   const { user } = useAuth();
-  const { courseId } = useParams();
   const navigate = useNavigate();
   const { createQuiz, addQuestion } = useQuizzes();
 
@@ -21,7 +20,7 @@ export default function CreateQuiz() {
 
   const handleCreateQuiz = async () => {
     if (!nome) return alert("Digite o nome");
-    const quiz = await createQuiz(courseId, nome);
+    const quiz = await createQuiz(nome);
     setQuizId(quiz.id);
   };
 

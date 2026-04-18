@@ -5,29 +5,23 @@ import { useAuth } from "../contexts/AuthContext";
 export function useQuizzes() {
   const { user } = useAuth();
 
-  const createQuiz = async (courseId, nome) => {
+  const createQuiz = async (nome) => {
     const docRef = await addDoc(collection(db, "quizzes"), {
       nome,
-      courseId,
       professorId: user.uid,
       createdAt: new Date(),
     });
-
     return { id: docRef.id };
   };
 
-  const getQuizzes = async (courseId) => {
+  const getQuizzes = async () => {
+    if (!user) return [];
     const q = query(
       collection(db, "quizzes"),
-      where("courseId", "==", courseId)
+      where("professorId", "==", user.uid)
     );
-
     const snapshot = await getDocs(q);
-
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   };
 
   const addQuestion = async (quizId, question) => {
@@ -41,11 +35,7 @@ export function useQuizzes() {
     const snapshot = await getDocs(
       collection(db, "quizzes", quizId, "questions")
     );
-
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   };
 
   const deleteQuiz = async (quizId) => {

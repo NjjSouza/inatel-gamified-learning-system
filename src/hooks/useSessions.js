@@ -127,6 +127,17 @@ export function useSessions() {
     });
   };
 
+  const listenSessionsByClass = (classId, callback) => {
+    const q = query(
+      collection(db, "sessions"),
+      where("classId", "==", classId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const sessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      callback(sessions);
+    });
+  };
+
   const startSession = async (sessionId) => {
     await updateDoc(doc(db, "sessions", sessionId), {
       status: "playing",
@@ -193,6 +204,7 @@ export function useSessions() {
     getSessions,
     getSessionsByCourse,
     listenSessionsByCourse,
+    listenSessionsByClass,
     startSession,
     finishSession,
     nextQuestion,

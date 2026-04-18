@@ -12,6 +12,7 @@ import EditQuiz from "./pages/EditQuiz";
 import Register from "./pages/Register";
 import CourseQuizzes from "./pages/CourseQuizzes";
 import SessionPlayer from "./pages/SessionPlayer";
+import ClassPageProfessor from "./pages/ClassPageProfessor";
 
 function App() {
   return (
@@ -102,10 +103,10 @@ function App() {
         />
 
         <Route
-          path="/professor/curso/:courseId/quizzes"
+          path="/professor/curso/:courseId/turma/:classId"
           element={
             <ProtectedRoute>
-              <CourseQuizzes />
+              <ClassPageProfessor />
             </ProtectedRoute>
           }
         />
