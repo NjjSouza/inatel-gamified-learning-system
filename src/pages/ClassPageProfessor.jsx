@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useClasses } from "../hooks/useClasses";
 import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
-import { collection, query, where, getDocs, doc, getDoc, deleteDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 
 function SessionTimer() {
@@ -37,7 +37,10 @@ export default function ClassPageProfessor() {
   const [showRanking, setShowRanking] = useState({});
   const [enrollments, setEnrollments] = useState([]);
   const [enrollEmail, setEnrollEmail] = useState("");
-  const [analytics, setAnalytics] = useState(null);
+  const [expandedSession, setExpandedSession] = useState(null);
+
+  const sessoesAtivas = sessions.filter(s => s.status !== "finished");
+  const historico = sessions.filter(s => s.status === "finished");
 
   useEffect(() => {
     const fetch = async () => {
@@ -80,54 +83,21 @@ export default function ClassPageProfessor() {
   }, [sessions]);
 
   useEffect(() => {
-    const unsubs = sessions
+    const novoRespondidos = {};
+    sessions
       .filter(s => s.status === "playing")
-      .map((s) => {
-        const q = query(
-          collection(db, "session_answers"),
-          where("sessionId", "==", s.id)
-        );
-        return onSnapshot(q, (snap) => {
-          setRespondidosPorSessao(prev => ({ ...prev, [s.id]: snap.docs.length }));
-        });
+      .forEach(s => {
+        const players = playersBySession[s.id] || [];
+        const currentIndex = s.currentQuestionIndex ?? 0;
+        const jaResponderam = players.filter(
+          p => p.answers && Object.prototype.hasOwnProperty.call(
+            p.answers, String(currentIndex)
+          )
+        ).length;
+        novoRespondidos[s.id] = jaResponderam;
       });
-    return () => unsubs.forEach(u => u && u());
-  }, [sessions]);
-
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      const sessionsSnap = await getDocs(query(
-        collection(db, "sessions"),
-        where("classId", "==", classId)
-      ));
-      const sessionIds = sessionsSnap.docs.map(d => d.id);
-      if (sessionIds.length === 0) return;
-
-      const answersSnap = await getDocs(query(
-        collection(db, "session_answers"),
-        where("sessionId", "in", sessionIds.slice(0, 10))
-      ));
-
-      const respostas = answersSnap.docs.map(d => d.data());
-      const total = respostas.length;
-      const acertos = respostas.filter(r => r.isCorrect).length;
-
-      const errosPorQuestao = {};
-      respostas.filter(r => !r.isCorrect).forEach(r => {
-        errosPorQuestao[r.questionId] = (errosPorQuestao[r.questionId] || 0) + 1;
-      });
-      const questaoMaisErros = Object.entries(errosPorQuestao)
-        .sort((a, b) => b[1] - a[1])[0];
-
-      setAnalytics({
-        totalRespostas: total,
-        taxaAcerto: total > 0 ? Math.round((acertos / total) * 100) : 0,
-        questaoMaisErros: questaoMaisErros ? questaoMaisErros[1] : 0,
-        totalSessoes: sessionIds.length,
-      });
-    };
-    fetchAnalytics();
-  }, [classId, sessions]);
+    setRespondidosPorSessao(novoRespondidos);
+  }, [sessions, playersBySession]);
 
   const handleCreateSession = async () => {
     if (!selectedQuiz) return alert("Selecione um quiz!");
@@ -147,12 +117,6 @@ export default function ClassPageProfessor() {
     } catch (e) {
       alert("Erro: " + e.message);
     }
-  };
-
-  const handleDeleteFinished = async () => {
-    if (!confirm("Remover todas as sessões encerradas?")) return;
-    const finished = sessions.filter(s => s.status === "finished");
-    await Promise.all(finished.map(s => deleteDoc(doc(db, "sessions", s.id))));
   };
 
   if (!classData) return <p>Carregando...</p>;
@@ -200,36 +164,30 @@ export default function ClassPageProfessor() {
         </div>
       )}
 
-      {/* Sessões */}
+      {/* Sessões ativas */}
       <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-          <h2 style={{ margin: 0 }}>Sessões</h2>
-          {sessions.some(s => s.status === "finished") && (
-            <button onClick={handleDeleteFinished} style={buttonDanger}>
-              Limpar encerradas
-            </button>
-          )}
-        </div>
+        <h2>Sessões Ativas</h2>
 
-        {sessions.length === 0 ? (
-          <p>Nenhuma sessão criada</p>
+        {sessoesAtivas.length === 0 ? (
+          <p>Nenhuma sessão em andamento</p>
         ) : (
-          sessions.map((s) => {
+          sessoesAtivas.map((s) => {
             const total = questionsCount[s.quizId] || 0;
             const current = Math.min((s.currentQuestionIndex ?? 0) + 1, total);
             const players = playersBySession[s.id] || [];
             const totalPlayers = players.length;
             const respondidos = respondidosPorSessao[s.id] || 0;
+            const quiz = quizzes.find(q => q.id === s.quizId);
 
             return (
               <div key={s.id} style={sessionCard}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ textAlign: "left" }}>
-                    <p style={{ margin: "0 0 4px" }}>
-                      <strong>PIN:</strong> {s.pin}
+                    <p style={{ margin: "0 0 4px", fontWeight: "bold" }}>
+                      {quiz?.nome || "Quiz"}
                     </p>
                     <p style={{ margin: "0 0 4px", fontSize: "13px", color: "#666" }}>
-                      Status: {s.status}
+                      PIN: {s.pin} · {s.status === "waiting" ? "Aguardando" : "Em andamento"}
                     </p>
                   </div>
 
@@ -240,7 +198,7 @@ export default function ClassPageProfessor() {
                         Pergunta {current}/{total}
                       </p>
                       <p style={{ margin: "2px 0", fontSize: "13px", color: "#555" }}>
-                        ☑ {respondidos} / {totalPlayers} responderam
+                        ☑ {respondidos}/{totalPlayers} responderam
                       </p>
                     </div>
                   )}
@@ -261,7 +219,10 @@ export default function ClassPageProfessor() {
                       >
                         Próxima
                       </button>
-                      <button onClick={() => finishSession(s.id)} style={buttonSecondary}>
+                      <button
+                        onClick={() => finishSession(s.id, s.quizId)}
+                        style={buttonSecondary}
+                      >
                         Finalizar
                       </button>
                     </>
@@ -302,28 +263,65 @@ export default function ClassPageProfessor() {
         )}
       </div>
 
-      {/* Analytics */}
-      {analytics && (
+      {/* Histórico */}
+      {historico.length > 0 && (
         <div style={card}>
-          <h2>Desempenho da Turma</h2>
-          <div style={statsGrid}>
-            <div style={statBox}>
-              <span style={statNumber}>{analytics.totalSessoes}</span>
-              <span style={statLabel}>Sessões realizadas</span>
-            </div>
-            <div style={statBox}>
-              <span style={statNumber}>{analytics.taxaAcerto}%</span>
-              <span style={statLabel}>Taxa de acerto geral</span>
-            </div>
-            <div style={statBox}>
-              <span style={statNumber}>{analytics.totalRespostas}</span>
-              <span style={statLabel}>Respostas registradas</span>
-            </div>
-            <div style={statBox}>
-              <span style={statNumber}>{analytics.questaoMaisErros}</span>
-              <span style={statLabel}>Erros na questão mais difícil</span>
-            </div>
-          </div>
+          <h2>Histórico de Sessões</h2>
+
+          {historico.map((s) => {
+            const quiz = quizzes.find(q => q.id === s.quizId);
+            const isExpanded = expandedSession === s.id;
+
+            return (
+              <div key={s.id} style={sessionCard}>
+                <button
+                  onClick={() => setExpandedSession(isExpanded ? null : s.id)}
+                  style={historicoButton}
+                >
+                  <div style={{ textAlign: "left" }}>
+                    <strong>{quiz?.nome || "Quiz"}</strong>
+                    <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#666" }}>
+                      {s.finishedAt?.toDate
+                        ? s.finishedAt.toDate().toLocaleDateString("pt-BR")
+                        : "—"}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={percentualBadge(s.percentualGeral)}>
+                      {s.percentualGeral ?? "—"}% de acerto
+                    </span>
+                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#aaa" }}>
+                      {isExpanded ? "▲ ocultar" : "▼ detalhes"}
+                    </p>
+                  </div>
+                </button>
+
+                {isExpanded && s.acertosPorQuestao && (
+                  <div style={{ marginTop: "12px" }}>
+                    {s.acertosPorQuestao.map((q, i) => (
+                      <div key={q.questionId} style={questaoRow}>
+                        <span style={{ fontSize: "13px", textAlign: "left", flex: 1 }}>
+                          {i + 1}. {q.pergunta}
+                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={barraFundo}>
+                            <div style={barraPreenchida(q.percentual)} />
+                          </div>
+                          <span style={{
+                            fontSize: "13px", fontWeight: "bold",
+                            color: q.percentual >= 70 ? "#4CAF50" : q.percentual >= 40 ? "#ff9800" : "#f44336",
+                            minWidth: "40px", textAlign: "right"
+                          }}>
+                            {q.percentual}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -383,12 +381,6 @@ export default function ClassPageProfessor() {
           </button>
         )}
       </div>
-
-      <div style={{ textAlign: "center", marginBottom: "30px" }}>
-        <button onClick={() => navigate(`/professor/curso/${courseId}`)} style={buttonSecondary}>
-          ← Voltar para a disciplina
-        </button>
-      </div>
     </div>
   );
 }
@@ -405,13 +397,6 @@ const sessionCard = {
   border: "1px solid #ccc", borderRadius: "10px",
   padding: "15px", marginBottom: "15px", textAlign: "left"
 };
-const statsGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginTop: "15px" };
-const statBox = {
-  background: "#f5f5f5", borderRadius: "10px", padding: "20px 10px",
-  display: "flex", flexDirection: "column", alignItems: "center", gap: "6px"
-};
-const statNumber = { fontSize: "28px", fontWeight: "bold", color: "#4CAF50" };
-const statLabel = { fontSize: "13px", color: "#666" };
 const inputStyle = {
   padding: "8px", borderRadius: "6px", border: "1px solid #ccc", fontSize: "14px", flex: 1
 };
@@ -433,3 +418,27 @@ const cardButton = {
 };
 const thStyle = { padding: "8px", fontSize: "12px", color: "#888", borderBottom: "2px solid #eee" };
 const tdStyle = { padding: "10px", fontSize: "14px", textAlign: "center" };
+const historicoButton = {
+  width: "100%", display: "flex", justifyContent: "space-between",
+  alignItems: "center", background: "none", border: "none",
+  cursor: "pointer", padding: 0
+};
+const percentualBadge = (pct) => ({
+  display: "inline-block", padding: "4px 10px", borderRadius: "20px",
+  fontSize: "13px", fontWeight: "bold",
+  background: pct >= 70 ? "#e8f5e9" : pct >= 40 ? "#fff3e0" : "#ffebee",
+  color: pct >= 70 ? "#4CAF50" : pct >= 40 ? "#ff9800" : "#f44336",
+});
+const questaoRow = {
+  display: "flex", justifyContent: "space-between", alignItems: "center",
+  gap: "12px", padding: "8px 0", borderBottom: "1px solid #f0f0f0"
+};
+const barraFundo = {
+  width: "80px", height: "8px", background: "#eee",
+  borderRadius: "4px", overflow: "hidden"
+};
+const barraPreenchida = (pct) => ({
+  height: "100%", borderRadius: "4px",
+  width: `${pct}%`,
+  background: pct >= 70 ? "#4CAF50" : pct >= 40 ? "#ff9800" : "#f44336",
+});

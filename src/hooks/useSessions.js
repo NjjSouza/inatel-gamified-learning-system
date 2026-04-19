@@ -1,5 +1,5 @@
 import { db } from "../services/firebase";
-import { collection, doc, addDoc, updateDoc, query, where, onSnapshot, getDocs, increment } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, query, where, onSnapshot, getDoc, getDocs, increment } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 import { useQuizzes } from "./useQuizzes";
 
@@ -145,9 +145,48 @@ export function useSessions() {
     });
   };
 
-  const finishSession = async (sessionId) => {
+  const finishSession = async (sessionId, quizId) => {
+    const answersSnap = await getDocs(query(
+      collection(db, "session_answers"),
+      where("sessionId", "==", sessionId)
+    ));
+
+    const respostas = answersSnap.docs.map(d => d.data());
+
+    const total = respostas.length;
+    const acertos = respostas.filter(r => r.isCorrect).length;
+    const percentualGeral = total > 0 ? Math.round((acertos / total) * 100) : 0;
+
+    const porQuestao = {};
+    respostas.forEach(r => {
+      if (!porQuestao[r.questionId]) {
+        porQuestao[r.questionId] = { acertos: 0, total: 0 };
+      }
+      porQuestao[r.questionId].total += 1;
+      if (r.isCorrect) porQuestao[r.questionId].acertos += 1;
+    });
+
+    const questoesSnap = await getDocs(
+      collection(db, "quizzes", quizId, "questions")
+    );
+    const questoesMap = {};
+    questoesSnap.docs.forEach(d => {
+      questoesMap[d.id] = d.data().pergunta;
+    });
+
+    const acertosPorQuestao = Object.entries(porQuestao).map(([qId, dados]) => ({
+      questionId: qId,
+      pergunta: questoesMap[qId] || "Questão removida",
+      percentual: Math.round((dados.acertos / dados.total) * 100),
+      acertos: dados.acertos,
+      total: dados.total,
+    }));
+
     await updateDoc(doc(db, "sessions", sessionId), {
       status: "finished",
+      percentualGeral,
+      acertosPorQuestao,
+      finishedAt: new Date(),
     });
   };
 
@@ -162,39 +201,37 @@ export function useSessions() {
     });
   };
 
-  const submitAnswer = async (playerId, sessionId, questionId, answerIndex, isCorrect, userId, classId) => {
-    if (!playerId) return false;
+  const submitAnswer = async (playerId, sessionId, questionId, questionIndex, answerIndex, isCorrect, userId, classId) => {
+  await addDoc(collection(db, "session_answers"), {
+    sessionId,
+    questionId,
+    userId,
+    answerIndex,
+    isCorrect,
+    xp: isCorrect ? 10 : 0,
+    answeredAt: new Date(),
+  });
 
-    await addDoc(collection(db, "session_answers"), {
+  const playerRef = doc(db, "session_players", playerId);
+  await updateDoc(playerRef, {
+    [`answers.${questionIndex}`]: answerIndex,
+    score: isCorrect ? increment(10) : increment(0),
+  });
+
+  if (isCorrect && userId && classId) {
+    await addDoc(collection(db, "xp"), {
+      userId,
+      classId,
+      amount: 10,
+      reason: "correct_answer",
       sessionId,
       questionId,
-      userId,
-      answerIndex,
-      isCorrect,
-      xp: isCorrect ? 10 : 0,
-      answeredAt: new Date(),
+      createdAt: new Date(),
     });
+  }
 
-    const playerRef = doc(db, "session_players", playerId);
-    await updateDoc(playerRef, {
-      score: isCorrect ? increment(10) : increment(0),
-    });
-
-    if (isCorrect && userId && classId) {
-      const xpRef = collection(db, "xp");
-      await addDoc(xpRef, {
-        userId,
-        classId,
-        amount: 10,
-        reason: "correct_answer",
-        sessionId,
-        questionId,
-        createdAt: new Date(),
-      });
-    }
-
-    return isCorrect;
-  };
+  return isCorrect;
+};
 
   return {
     createSession,

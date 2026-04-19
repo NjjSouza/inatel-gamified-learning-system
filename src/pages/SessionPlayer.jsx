@@ -103,6 +103,7 @@ export default function SessionPlayer() {
                   playerId,
                   sessionId,
                   current.id,
+                  session.currentQuestionIndex,
                   alt.originalIndex,
                   isCorrect,
                   user.uid,

@@ -7,7 +7,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { db } from "../services/firebase";
 
 function getNivel(xp) {
-  if (xp <= 200) return { label: "Madeira", emoji: "🪵" };
+  if (xp <= 200) return { label: "Pedra", emoji: "🪨" };
   if (xp <= 400) return { label: "Bronze", emoji: "🥉" };
   if (xp <= 600) return { label: "Prata", emoji: "🥈" };
   if (xp <= 800) return { label: "Ouro", emoji: "🥇" };

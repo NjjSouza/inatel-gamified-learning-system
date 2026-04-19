@@ -54,7 +54,9 @@ service cloud.firestore {
       allow create: if isProfessor();
       allow update: if isAuthenticated() &&
         resource.data.professorId == request.auth.uid;
-      allow delete: if false;
+      allow delete: if isAuthenticated() &&
+        resource.data.professorId == request.auth.uid &&
+        resource.data.status == "finished";
     }
 
     // Jogadores da sessão
@@ -66,7 +68,7 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid;
       allow delete: if false;
     }
-
+    
     // Classes (turmas)
     match /classes/{classId} {
       allow read: if isAuthenticated();
@@ -86,7 +88,7 @@ service cloud.firestore {
           .data.professorId == request.auth.uid;
       allow update: if false;
     }
-
+    
     // Answers
     match /session_answers/{answerId} {
       allow read: if isAuthenticated();
@@ -104,4 +106,3 @@ service cloud.firestore {
 		}
   }
 }
-
