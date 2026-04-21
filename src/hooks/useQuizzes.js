@@ -1,5 +1,5 @@
 import { db } from "../services/firebase";
-import { collection, doc, addDoc, getDocs, deleteDoc, query, where } from "firebase/firestore";
+import { collection, doc, addDoc, getDocs, updateDoc, deleteDoc, query, where } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 
 export function useQuizzes() {
@@ -42,5 +42,18 @@ export function useQuizzes() {
     await deleteDoc(doc(db, "quizzes", quizId));
   };
 
-  return { createQuiz, getQuizzes, addQuestion, getQuestions, deleteQuiz };
+  const updateQuestion = async (quizId, questionId, data) => {
+  await updateDoc(
+    doc(db, "quizzes", quizId, "questions", questionId),
+    data
+  );
+};
+
+const deleteQuestion = async (quizId, questionId) => {
+  await deleteDoc(
+    doc(db, "quizzes", quizId, "questions", questionId)
+  );
+};
+
+  return { createQuiz, getQuizzes, addQuestion, getQuestions, deleteQuiz, updateQuestion, deleteQuestion };
 }
