@@ -49,7 +49,6 @@ function DashboardAluno() {
       <div style={header}>
         <h1>Área do Aluno</h1>
         <p>Bem-vindo, {user?.nome || "Usuário"}</p>
-        <button onClick={logout} style={buttonLogout}>Sair</button>
       </div>
 
       <div style={card}>

@@ -68,7 +68,6 @@ function DashboardProfessor() {
       <div style={header}>
         <h1>Área do Professor</h1>
         <p>Bem-vindo, {user?.nome || "Usuário"}</p>
-        <button onClick={logout} style={buttonLogout}>Sair</button>
       </div>
 
       {/* Disciplinas */}

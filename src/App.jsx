@@ -10,13 +10,22 @@ import JoinSession from "./pages/JoinSession";
 import CreateQuiz from "./pages/CreateQuiz";
 import EditQuiz from "./pages/EditQuiz";
 import Register from "./pages/Register";
-import CourseQuizzes from "./pages/CourseQuizzes";
 import SessionPlayer from "./pages/SessionPlayer";
 import ClassPageProfessor from "./pages/ClassPageProfessor";
+import ProfileAluno from "./pages/ProfileAluno";
+import ProfileProfessor from "./pages/ProfileProfessor";
+import Navbar from "./components/Navbar";
 
 function App() {
   return (
     <BrowserRouter>
+      <Navbar />
+      <div style={{ paddingTop: "56px" }}>
+        <Routes>
+          {/* ... */}
+        </Routes>
+      </div>
+
       <Routes>
         <Route 
           path="/" 
@@ -107,6 +116,24 @@ function App() {
           element={
             <ProtectedRoute>
               <ClassPageProfessor />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/aluno/perfil"
+          element={
+            <ProtectedRoute>
+              <ProfileAluno />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/professor/perfil"
+          element={
+            <ProtectedRoute>
+              <ProfileProfessor />
             </ProtectedRoute>
           }
         />
