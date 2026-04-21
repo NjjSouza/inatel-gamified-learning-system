@@ -5,6 +5,7 @@ import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
+import Spinner from "../components/Spinner";
 
 function SessionTimer() {
   const [seconds, setSeconds] = useState(0);
@@ -102,7 +103,7 @@ export default function ClassPageProfessor() {
   const handleCreateSession = async () => {
     if (!selectedQuiz) return alert("Selecione um quiz!");
     const session = await createSession(selectedQuiz.id, courseId, classId);
-    alert(`Sessão criada! PIN: ${session.pin}`);
+    alert(`Sessão criada com sucesso! Código: ${session.pin}`);
     setSelectedQuiz(null);
   };
 
@@ -119,7 +120,7 @@ export default function ClassPageProfessor() {
     }
   };
 
-  if (!classData) return <p>Carregando...</p>;
+  if (!classData) return <Spinner />;
 
   return (
     <div style={container}>
@@ -140,7 +141,7 @@ export default function ClassPageProfessor() {
           <p style={sectionLabel}>Selecione o quiz:</p>
 
           {quizzes.length === 0 ? (
-            <p>Nenhum quiz criado ainda.</p>
+            <p>Você ainda não criou nenhum quiz.</p>
           ) : (
             quizzes.map((q) => (
               <button
@@ -169,7 +170,7 @@ export default function ClassPageProfessor() {
         <h2>Sessões Ativas</h2>
 
         {sessoesAtivas.length === 0 ? (
-          <p>Nenhuma sessão em andamento</p>
+          <p>Nenhuma sessão ativa no momento.</p>
         ) : (
           sessoesAtivas.map((s) => {
             const total = questionsCount[s.quizId] || 0;
@@ -183,11 +184,8 @@ export default function ClassPageProfessor() {
               <div key={s.id} style={sessionCard}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ textAlign: "left" }}>
-                    <p style={{ margin: "0 0 4px", fontWeight: "bold" }}>
-                      {quiz?.nome || "Quiz"}
-                    </p>
                     <p style={{ margin: "0 0 4px", fontSize: "13px", color: "#666" }}>
-                      PIN: {s.pin} · {s.status === "waiting" ? "Aguardando" : "Em andamento"}
+                      {`Código: ${s.pin} — ${s.status === "waiting" ? "Aguardando entrada dos alunos" : "Em andamento"}`}
                     </p>
                   </div>
 
@@ -195,10 +193,10 @@ export default function ClassPageProfessor() {
                     <div style={{ textAlign: "right" }}>
                       <SessionTimer key={`${s.id}-${s.currentQuestionIndex}`} />
                       <p style={{ margin: "2px 0", fontSize: "13px" }}>
-                        Pergunta {current}/{total}
+                        Pergunta {current} de {total}
                       </p>
                       <p style={{ margin: "2px 0", fontSize: "13px", color: "#555" }}>
-                        ☑ {respondidos}/{totalPlayers} responderam
+                        {`${respondidos} de ${totalPlayers} alunos responderam`}
                       </p>
                     </div>
                   )}
@@ -217,13 +215,13 @@ export default function ClassPageProfessor() {
                         disabled={(s.currentQuestionIndex ?? 0) >= total - 1}
                         style={buttonPrimary}
                       >
-                        Próxima
+                        Próxima Pergunta
                       </button>
                       <button
                         onClick={() => finishSession(s.id, s.quizId)}
                         style={buttonSecondary}
                       >
-                        Finalizar
+                        Encerrar sessão
                       </button>
                     </>
                   )}
@@ -231,7 +229,7 @@ export default function ClassPageProfessor() {
                     onClick={() => setShowRanking(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
                     style={buttonSecondary}
                   >
-                    {showRanking[s.id] ? "Ocultar ranking" : "Ver ranking"}
+                    {showRanking[s.id] ? "Ocultar placar" : "Ver placar"}
                   </button>
                 </div>
 
@@ -338,13 +336,13 @@ export default function ClassPageProfessor() {
               style={inputStyle}
             />
             <button onClick={handleEnroll} style={buttonPrimary}>
-              Matricular
+              Adicionar aluno
             </button>
           </div>
         )}
 
         {enrollments.length === 0 ? (
-          <p>Nenhum aluno matriculado</p>
+          <p>Nenhum aluno cadastrado nesta turma ainda.</p>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -377,7 +375,7 @@ export default function ClassPageProfessor() {
             )}
             style={{ ...buttonDanger, marginTop: "20px" }}
           >
-            Encerrar Turma
+            Encerrar turma
           </button>
         )}
       </div>
@@ -392,7 +390,7 @@ const card = {
   background: "#fff", borderRadius: "10px",
   boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
 };
-const sectionLabel = { fontWeight: "bold", textAlign: "left", marginBottom: "8px" };
+const sectionLabel = { fontWeight: "bold", textAlign: "center", marginBottom: "8px", color: "#333" };
 const sessionCard = {
   border: "1px solid #ccc", borderRadius: "10px",
   padding: "15px", marginBottom: "15px", textAlign: "left"

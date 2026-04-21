@@ -4,6 +4,7 @@ import { useCourses } from "../hooks/useCourses";
 import { useClasses } from "../hooks/useClasses";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
+import Spinner from "../components/Spinner";
 
 function CoursePageProfessor() {
   const { courseId } = useParams();
@@ -48,7 +49,7 @@ function CoursePageProfessor() {
     }
   };
 
-  if (!course) return <p>Carregando...</p>;
+  if (!course) return <Spinner />;
 
   return (
     <div style={container}>
@@ -62,10 +63,10 @@ function CoursePageProfessor() {
 
         <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px" }}>
           <input
-            placeholder="Semestre (ex: 2025/2)"
+            placeholder="Semestre (ex: 2026/2)"
             value={newSemestre}
             onChange={(e) => setNewSemestre(e.target.value)}
-            style={inputStyle}
+            style={{ ...inputStyle, flex: 1 }}
           />
           <button onClick={handleCreateClass} style={buttonPrimary}>
             Criar Turma
@@ -73,7 +74,7 @@ function CoursePageProfessor() {
         </div>
 
         {classes.length === 0 ? (
-          <p>Nenhuma turma criada</p>
+          <p>Nenhuma turma cadastrada para esta disciplina.</p>
         ) : (
           classes.map((c) => (
             <button

@@ -5,6 +5,7 @@ import { useClasses } from "../hooks/useClasses";
 import { useAuth } from "../contexts/AuthContext";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../services/firebase";
+import Spinner from "../components/Spinner";
 
 function getNivel(xp) {
   if (xp <= 200) return { label: "Pedra", emoji: "🪨" };
@@ -153,7 +154,7 @@ export default function CoursePageAluno() {
     fetchData();
   }, [courseId, user]);
 
-  if (!course) return <p>Carregando...</p>;
+  if (!course) return <Spinner />;
 
   const precisao = stats.totalRespostas > 0
     ? Math.round((stats.totalAcertos / stats.totalRespostas) * 100)

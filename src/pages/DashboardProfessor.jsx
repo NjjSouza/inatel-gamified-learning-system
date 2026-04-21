@@ -80,7 +80,7 @@ function DashboardProfessor() {
             placeholder="Nome da disciplina"
             value={nomeCurso}
             onChange={(e) => setNomeCurso(e.target.value)}
-            style={inputStyle}
+            style={{ ...inputStyle, flex: 1 }}
           />
           <button onClick={handleCreateCourse} style={buttonPrimary}>
             Criar
@@ -112,7 +112,7 @@ function DashboardProfessor() {
             placeholder="Nome do quiz"
             value={nomeQuiz}
             onChange={(e) => setNomeQuiz(e.target.value)}
-            style={inputStyle}
+            style={{ ...inputStyle, flex: 1 }}
           />
           <button onClick={handleCreateQuiz} style={buttonPrimary}>
             Criar
@@ -156,7 +156,7 @@ const card = {
 };
 const inputStyle = {
   padding: "10px", borderRadius: "6px",
-  border: "1px solid #ccc", width: "60%"
+  border: "1px solid #ccc", width: "100%", boxSizing: "border-box"
 };
 const buttonPrimary = {
   padding: "10px 15px", borderRadius: "8px", border: "none",
