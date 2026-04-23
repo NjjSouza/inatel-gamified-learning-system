@@ -40,15 +40,26 @@ function Login() {
     >
       <div
         style={{
-          width: "320px",
-          padding: "25px",
+          width: "400px",
+          padding: "35px 40px",
           background: "white",
-          borderRadius: "10px",
-          boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+          borderRadius: "12px",
+          boxShadow: "0 0 20px rgba(0,0,0,0.1)",
           textAlign: "center"
         }}
       >
-        <h2>G-Learning</h2>
+        <img
+          src="/logo.png"
+          alt="Inatelligent"
+          style={{
+            height: "200px",
+            maxWidth: "300px",
+            height: "auto",     
+            objectFit: "contain",
+            display: "block",
+            margin: "0 auto 20px" 
+          }}
+        />
 
         <input
           type="email"

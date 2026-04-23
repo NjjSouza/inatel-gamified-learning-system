@@ -15,6 +15,7 @@ import ClassPageProfessor from "./pages/ClassPageProfessor";
 import ProfileAluno from "./pages/ProfileAluno";
 import ProfileProfessor from "./pages/ProfileProfessor";
 import Navbar from "./components/Navbar";
+import SessionLivePage from "./pages/SessionLivePage";
 
 function App() {
   return (
@@ -69,6 +70,13 @@ function App() {
           <Route path="/professor/perfil" element={
             <ProtectedRoute><ProfileProfessor /></ProtectedRoute>
           } />
+
+          <Route path="/professor/sessao/:sessionId" element={
+            <ProtectedRoute>
+              <SessionLivePage />
+            </ProtectedRoute>
+          } />
+
         </Routes>
       </div>
     </BrowserRouter>

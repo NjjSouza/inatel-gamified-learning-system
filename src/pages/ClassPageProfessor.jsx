@@ -204,7 +204,13 @@ export default function ClassPageProfessor() {
 
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
                   {s.status === "waiting" && (
-                    <button onClick={() => startSession(s.id)} style={buttonPrimary}>
+                    <button
+                      onClick={async () => {
+                        await startSession(s.id);
+                        navigate(`/professor/sessao/${s.id}`);
+                      }}
+                      style={buttonPrimary}
+                    >
                       Iniciar
                     </button>
                   )}

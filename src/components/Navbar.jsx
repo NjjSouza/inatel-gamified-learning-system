@@ -21,7 +21,11 @@ export default function Navbar() {
 
   return (
     <div style={navbar}>
-      <span style={logo}>G-Learning</span>
+      <img 
+        src="/logo.png" 
+        alt="Inatelligent" 
+        style={{ height: "32px", objectFit: "contain" }} 
+      />
       <button
         onClick={handlePerfilClick}
         style={{
