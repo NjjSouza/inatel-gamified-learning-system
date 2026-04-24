@@ -8,7 +8,7 @@
 
 **Acessar a pasta do projeto**
 ```bash
-cd C:\Users\aluno\Downloads\inatel-gamified-learning-system
+cd "C:\Users\aluno\Downloads\inatel-gamified-learning-system"
 ```
 
 **Configuração de nome e e-mail (global)**
