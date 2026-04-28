@@ -100,9 +100,24 @@ service cloud.firestore {
 		// XP: 
 		match /xp/{xpId} {
   		allow read: if isAuthenticated();
-  		allow create: if isAuthenticated() &&
+  	  allow create: if isAuthenticated() &&
     		request.resource.data.userId == request.auth.uid;
   		allow update, delete: if false;
 		}
+
+    // Coins:
+    match /coins/{coinId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Coin Balance:
+    match /coin_balance/{balanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+    }
   }
 }

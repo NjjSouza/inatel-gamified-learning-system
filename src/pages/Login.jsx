@@ -12,11 +12,10 @@ function Login() {
 
   const handleLogin = async () => {
     setErro("");
-
     try {
       await login(email, senha);
     } catch (err) {
-      setErro("Email ou senha inválidos");
+      setErro("E-mail ou senha incorretos. Tente novamente.");
     }
   };
 
@@ -29,39 +28,32 @@ function Login() {
   }, [user]);
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "#f5f5f5"
-      }}
-    >
-      <div
-        style={{
-          width: "400px",
-          padding: "35px 40px",
-          background: "white",
-          borderRadius: "12px",
-          boxShadow: "0 0 20px rgba(0,0,0,0.1)",
-          textAlign: "center"
-        }}
-      >
+    <div style={{
+      height: "100vh", display: "flex",
+      justifyContent: "center", alignItems: "center",
+      background: "#f5f5f5"
+    }}>
+      <div style={{
+        width: "400px", padding: "35px 40px",
+        background: "white", borderRadius: "12px",
+        boxShadow: "0 0 20px rgba(0,0,0,0.1)", textAlign: "center"
+      }}>
         <img
           src="/logo.png"
           alt="Inatelligent"
           style={{
-            height: "200px",
+            width: "100%",
             maxWidth: "300px",
-            height: "auto",     
+            height: "auto",
             objectFit: "contain",
             display: "block",
-            margin: "0 auto 20px" 
+            margin: "0 auto 20px"
           }}
         />
 
         <input
+          id="email"
+          name="email"
           type="email"
           placeholder="Email"
           value={email}
@@ -70,6 +62,8 @@ function Login() {
         />
 
         <input
+          id="password"
+          name="password"
           type="password"
           placeholder="Senha"
           value={senha}
@@ -85,12 +79,11 @@ function Login() {
           <button style={{ flex: 1 }} onClick={handleLogin}>
             Entrar
           </button>
-
           <button
             style={{ flex: 1 }}
             onClick={() => navigate("/registrar")}
           >
-            Registrar
+            Sou professor
           </button>
         </div>
       </div>
@@ -99,12 +92,8 @@ function Login() {
 }
 
 const inputStyle = {
-  width: "100%",
-  padding: "10px",
-  marginBottom: "10px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-  boxSizing: "border-box"
+  width: "100%", padding: "10px", marginBottom: "10px",
+  borderRadius: "6px", border: "1px solid #ccc", boxSizing: "border-box"
 };
 
 export default Login;

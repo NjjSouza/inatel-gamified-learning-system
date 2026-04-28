@@ -1,5 +1,5 @@
 import { db } from "../services/firebase";
-import { collection, doc, addDoc, updateDoc, query, where, onSnapshot, getDoc, getDocs, increment } from "firebase/firestore";
+import { collection, doc, addDoc, updateDoc, query, where, onSnapshot, getDoc, getDocs, setDoc, increment } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 import { useQuizzes } from "./useQuizzes";
 
@@ -228,6 +228,28 @@ export function useSessions() {
       questionId,
       createdAt: new Date(),
     });
+
+    // estrutura de moedas (valor a definir)
+    await addDoc(collection(db, "coins"), {
+      userId,
+      classId,
+      amount: 0,
+      reason: "correct_answer",
+      sessionId,
+      questionId,
+      createdAt: new Date(),
+    });
+
+    await setDoc(
+      doc(db, "coin_balance", `${userId}_${classId}`),
+      {
+        userId,
+        classId,
+        balance: increment(0),
+        updatedAt: new Date(),
+      },
+      { merge: true }
+    );
   }
 
   return isCorrect;
