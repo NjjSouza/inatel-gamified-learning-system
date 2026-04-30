@@ -5,6 +5,7 @@ import { useClasses } from "../hooks/useClasses";
 import { useCourses } from "../hooks/useCourses";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 function getNivel(xp) {
   if (xp <= 200) return { label: "Pedra", emoji: "🪨" };
@@ -93,6 +94,13 @@ export default function ProfileAluno() {
         <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
           {user?.email}
         </p>
+
+        <DotLottieReact
+          src="https://lottie.host/be439f2a-2a11-4425-8b5e-b82a42989f9f/8EbJ2FnIF7.lottie"
+          autoplay
+          loop
+          Style={{ width: 200, height: 200, margin: "0 auto" }}
+        />
 
         <button onClick={handleLogout} style={{ ...buttonDanger, marginTop: "20px" }}>
           Sair

@@ -1,12 +1,14 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { doc, onSnapshot, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useQuizzes } from "../hooks/useQuizzes";
 import { useAuth } from "../contexts/AuthContext";
 import { useSessions } from "../hooks/useSessions";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import LottieOverlay from "../components/LottieOverlay";
+import RankingTable from "../components/RankingTable";
 
-// Embaralha array sem modificar o original
 function shuffleArray(array) {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -23,31 +25,30 @@ export default function SessionPlayer() {
   const { submitAnswer } = useSessions();
 
   const [session, setSession] = useState(null);
-  const [questions, setQuestions] = useState([]);
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const [shuffledAlts, setShuffledAlts] = useState([]);
   const [playerId, setPlayerId] = useState(null);
   const [answered, setAnswered] = useState(false);
+  const [showAnswerOverlay, setShowAnswerOverlay] = useState(false);
+  const [showFinishedOverlay, setShowFinishedOverlay] = useState(false);
+  const [finalPlayers, setFinalPlayers] = useState([]);
 
-  // Escuta mudanças na sessão em tempo real
+  // Escuta sessão em tempo real
   useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, "sessions", sessionId), (docSnap) => {
-      if (docSnap.exists()) {
-        setSession({ id: docSnap.id, ...docSnap.data() });
-      }
+    const unsub = onSnapshot(doc(db, "sessions", sessionId), (docSnap) => {
+      if (docSnap.exists()) setSession({ id: docSnap.id, ...docSnap.data() });
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, [sessionId]);
 
-  // Carrega e embaralha perguntas quando o quiz é identificado
+  // Carrega e embaralha perguntas
   useEffect(() => {
     if (!session?.quizId) return;
     const fetch = async () => {
       const data = await getQuestions(session.quizId);
-      setQuestions(data);
       setShuffledQuestions(shuffleArray(data));
     };
-    fetch();
+  fetch();
   }, [session?.quizId]);
 
   // Embaralha alternativas a cada nova pergunta
@@ -55,14 +56,13 @@ export default function SessionPlayer() {
     const current = shuffledQuestions[session?.currentQuestionIndex];
     if (!current) return;
     const altsComIndice = current.alternativas.map((alt, i) => ({
-      texto: alt,
-      originalIndex: i,
+      texto: alt, originalIndex: i,
     }));
     setShuffledAlts(shuffleArray(altsComIndice));
     setAnswered(false);
   }, [session?.currentQuestionIndex, shuffledQuestions]);
 
-  // Busca o registro do jogador nesta sessão
+  // Busca o jogador na sessão
   useEffect(() => {
     if (!user) return;
     const fetchPlayer = async () => {
@@ -77,17 +77,44 @@ export default function SessionPlayer() {
     fetchPlayer();
   }, [sessionId, user]);
 
+  // Mostra overlay de troféu quando sessão encerra
+  useEffect(() => {
+    if (session?.status === "finished") {
+      setShowFinishedOverlay(true);
+    }
+  }, [session?.status]);
+
+  // Busca ranking final quando sessão encerra
+  useEffect(() => {
+    if (session?.status !== "finished") return;
+    const fetchPlayers = async () => {
+      const q = query(
+        collection(db, "session_players"),
+        where("sessionId", "==", sessionId)
+      );
+      const snap = await getDocs(q);
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setFinalPlayers(data);
+    };
+    fetchPlayers();
+  }, [session?.status]);
+
   if (!session) return (
     <div style={fullCenter}>
       <div style={spinnerStyle} />
     </div>
   );
 
-  // Tela de espera antes do professor iniciar
+  // Tela de espera
   if (session.status === "waiting") return (
     <div style={fullCenter}>
       <div style={waitingCard}>
-        <p style={waitingEmoji}>⏳</p>
+        <DotLottieReact
+          src="https://lottie.host/bd15ee68-de80-4a7f-87a4-7d16d992f416/oUWbhJDnjs.lottie"
+          autoplay
+          loop
+          style={{ width: 200, height: 200, margin: "0 auto" }}
+          />
         <p style={waitingText}>Aguardando o professor iniciar a sessão...</p>
         <p style={waitingSubtext}>Fique nesta tela. A sessão começará em breve.</p>
       </div>
@@ -97,23 +124,47 @@ export default function SessionPlayer() {
   // Tela de encerramento
   if (session.status === "finished") return (
     <div style={fullCenter}>
-      <div style={finishedCard}>
-        <p style={finishedEmoji}>🎉</p>
-        <h2 style={finishedTitle}>Sessão encerrada!</h2>
-        <p style={finishedSubtext}>Bom trabalho! Seus pontos foram registrados.</p>
-      </div>
+      {showFinishedOverlay && (
+        <div style={{ textAlign: "center" }}>
+          <DotLottieReact
+            src="https://lottie.host/63e7884d-4599-4223-89b0-446d20a28c9c/2hTKas29T2.lottie"
+            autoplay
+            loop={false}
+            style={{ width: 200, height: 200, margin: "0 auto" }}
+          />
+        </div>
+      )}
+      {!showFinishedOverlay && (
+        <div style={{ ...finishedCard, maxWidth: "500px" }}>
+          <h2 style={finishedTitle}>Sessão encerrada!</h2>
+          <p style={{ ...finishedSubtext, marginBottom: "20px" }}>
+            Bom trabalho! Seus pontos foram registrados.
+          </p>
+          <RankingTable
+            players={finalPlayers}
+            highlightUserId={playerId}
+          />
+        </div>
+      )}
     </div>
   );
 
   const current = shuffledQuestions[session.currentQuestionIndex];
   if (!current || shuffledAlts.length === 0) return (
-    <div style={fullCenter}>
-      <div style={spinnerStyle} />
-    </div>
+    <div style={fullCenter}><div style={spinnerStyle} /></div>
   );
 
   return (
     <div style={container}>
+      {/* Overlay de comemoração ao responder */}
+      {showAnswerOverlay && (
+        <LottieOverlay
+          src="https://lottie.host/4dc5164b-745c-4298-bda6-06a5b3d54390/bwscDzTAcV.lottie"
+          duration={2000}
+          onFinish={() => setShowAnswerOverlay(false)}
+        />
+      )}
+
       <div style={card}>
         <p style={questionCounter}>
           Pergunta {session.currentQuestionIndex + 1} de {shuffledQuestions.length}
@@ -130,16 +181,12 @@ export default function SessionPlayer() {
                 if (!playerId) return;
                 const isCorrect = current.respostaCorreta === alt.originalIndex;
                 await submitAnswer(
-                  playerId,
-                  sessionId,
-                  current.id,
-                  session.currentQuestionIndex,
-                  alt.originalIndex,
-                  isCorrect,
-                  user.uid,
-                  session.classId
+                  playerId, sessionId, current.id,
+                  session.currentQuestionIndex, alt.originalIndex,
+                  isCorrect, user.uid, session.classId
                 );
                 setAnswered(true);
+                setShowAnswerOverlay(true);
               }}
               style={{
                 ...answerButton,
@@ -152,7 +199,7 @@ export default function SessionPlayer() {
           ))}
         </div>
 
-        {answered && (
+        {answered && !showAnswerOverlay && (
           <p style={answeredFeedback}>Resposta registrada! 🎉</p>
         )}
       </div>
@@ -171,28 +218,19 @@ const spinnerStyle = {
   animation: "spin 0.8s linear infinite"
 };
 const waitingCard = {
-  textAlign: "center", padding: "40px",
-  background: "#fff", borderRadius: "16px",
-  boxShadow: "0 0 20px rgba(0,0,0,0.08)",
+  textAlign: "center", padding: "40px", background: "#fff",
+  borderRadius: "16px", boxShadow: "0 0 20px rgba(0,0,0,0.08)",
   maxWidth: "400px", width: "90%"
 };
-const waitingEmoji = {
-  fontSize: "48px", margin: "0 0 16px",
-  animation: "pulse 2s ease-in-out infinite"
-};
 const waitingText = {
-  fontSize: "18px", fontWeight: "bold",
-  color: "#333", margin: "0 0 8px"
+  fontSize: "18px", fontWeight: "bold", color: "#333", margin: "16px 0 8px"
 };
 const waitingSubtext = { fontSize: "14px", color: "#888", margin: 0 };
 const finishedCard = {
-  textAlign: "center", padding: "40px",
-  background: "#fff", borderRadius: "16px",
-  boxShadow: "0 0 20px rgba(0,0,0,0.08)",
-  maxWidth: "400px", width: "90%",
-  animation: "fadeInUp 0.5s ease"
+  textAlign: "center", padding: "40px", background: "#fff",
+  borderRadius: "16px", boxShadow: "0 0 20px rgba(0,0,0,0.08)",
+  width: "90%", animation: "fadeInUp 0.5s ease"
 };
-const finishedEmoji = { fontSize: "64px", margin: "0 0 16px" };
 const finishedTitle = { margin: "0 0 8px", color: "#333" };
 const finishedSubtext = { fontSize: "14px", color: "#888", margin: 0 };
 const container = {
@@ -204,20 +242,14 @@ const card = {
   background: "#fff", borderRadius: "10px",
   boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
 };
-const questionCounter = {
-  fontSize: "13px", color: "#888", margin: "0 0 12px"
-};
-const questionText = {
-  fontSize: "20px", marginBottom: "24px", color: "#333"
-};
+const questionCounter = { fontSize: "13px", color: "#888", margin: "0 0 12px" };
+const questionText = { fontSize: "20px", marginBottom: "24px", color: "#333" };
 const answersContainer = { display: "flex", flexDirection: "column", gap: "10px" };
 const answerButton = {
   padding: "14px", borderRadius: "8px", border: "none",
   background: "#4CAF50", color: "#fff",
-  fontWeight: "bold", fontSize: "15px",
-  transition: "opacity 0.2s"
+  fontWeight: "bold", fontSize: "15px", transition: "opacity 0.2s"
 };
 const answeredFeedback = {
-  marginTop: "16px", fontSize: "15px",
-  color: "#4CAF50", fontWeight: "bold"
+  marginTop: "16px", fontSize: "15px", color: "#4CAF50", fontWeight: "bold"
 };
