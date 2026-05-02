@@ -1,5 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap');
 
+/* Variáveis de cor - modo claro */
+:root {
+  --cor-primaria: #C64D4D;
+  --cor-primaria-hover: #b04444;
+  --cor-primaria-claro: #fdf0f0;
+  --cor-primaria-borda: rgba(198, 77, 77, 0.3);
+
+  --bg: #f5f5f5;
+  --bg-card: #ffffff;
+  --texto: #333333;
+  --texto-suave: #666666;
+  --texto-muito-suave: #aaaaaa;
+  --borda: #e0e0e0;
+  --sombra: rgba(0, 0, 0, 0.08);
+  --destaque-primeiro: #fff8f8;
+  --destaque-usuario: #fdf0f0;
+}
+
+/* Variáveis de cor - modo escuro */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cor-primaria: #e06060;
+    --cor-primaria-hover: #c95555;
+    --cor-primaria-claro: #2d1f1f;
+    --cor-primaria-borda: rgba(224, 96, 96, 0.3);
+
+    --bg: #1a1a1a;
+    --bg-card: #242424;
+    --texto: #e8e8e8;
+    --texto-suave: #aaaaaa;
+    --texto-muito-suave: #666666;
+    --borda: #3a3a3a;
+    --sombra: rgba(0, 0, 0, 0.4);
+    --destaque-primeiro: #2d2010;
+    --destaque-usuario: #2d1f1f;
+  }
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -9,33 +47,34 @@
 body {
   font-family: 'Nunito', 'Segoe UI', sans-serif;
   font-size: 16px;
-  color: #333;
-  background: #f5f5f5;
+  color: var(--texto);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
-}
-
-h1, h2, h3, h4 {
-  font-family: 'Fredoka One', sans-serif;
-  font-weight: 400; 
-  color: #222;
-}
-
-button {
-  font-family: 'Nunito', sans-serif;
-  font-size: inherit;
-}
-
-input, select, textarea {
-  font-family: 'Nunito', sans-serif;
-  font-size: inherit;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   min-height: 100vh;
 }
 
+h1, h2, h3, h4 {
+  font-family: 'Fredoka One', sans-serif;
+  font-weight: 400;
+  color: var(--texto);
+}
+
 p {
   line-height: 1.5;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
 }
 
 @keyframes spin {
@@ -50,4 +89,12 @@ p {
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Fundo com interrogações - usado no SessionPlayer */
+.fundo-quiz {
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='10' y='40' font-size='30' fill='rgba(198,77,77,0.06)'%3E%3F%3C/text%3E%3C/svg%3E");
 }

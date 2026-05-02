@@ -1,26 +1,20 @@
 import { useEffect } from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
-export default function LottieOverlay({ src, isVideo, onFinish, duration = 2000 }) {
+export default function LottieOverlay({ src, onFinish, duration = 2000, loop = true, dark = false }) {
   useEffect(() => {
     const timer = setTimeout(onFinish, duration);
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div style={isVideo ? overlayEscuro : overlayTransparente}>
-      {isVideo ? (
-        <video autoPlay muted playsInline style={{ width: 300, height: 300 }}>
-          <source src={src} type="video/webm" />
-        </video>
-      ) : (
-        <DotLottieReact
-          src={src}
-          autoplay
-          loop
-          style={{ width: 300, height: 300 }}
-        />
-      )}
+    <div style={dark ? overlayEscuro : overlayTransparente}>
+      <DotLottieReact
+        src={src}
+        autoplay
+        loop={loop}
+        style={{ width: 300, height: 300 }}
+      />
     </div>
   );
 }
@@ -42,6 +36,6 @@ const overlayTransparente = {
 
 const overlayEscuro = {
   ...base,
-  background: "rgba(0, 0, 0, 0.7)",
+  background: "rgba(0, 0, 0, 0.75)",
   pointerEvents: "all",
 };

@@ -91,7 +91,7 @@ export default function ProfileAluno() {
         <h2 style={{ marginTop: "15px", marginBottom: "4px" }}>
           {user?.nome || "Aluno"}
         </h2>
-        <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
+        <p style={{ color: "var(--texto-muito-suave)", fontSize: "14px", margin: 0 }}>
           {user?.email}
         </p>
 
@@ -99,7 +99,7 @@ export default function ProfileAluno() {
           src="https://lottie.host/be439f2a-2a11-4425-8b5e-b82a42989f9f/8EbJ2FnIF7.lottie"
           autoplay
           loop
-          Style={{ width: 200, height: 200, margin: "0 auto" }}
+          style={{ width: 200, height: 200, margin: "0 auto" }}
         />
 
         <button onClick={handleLogout} style={{ ...buttonDanger, marginTop: "20px" }}>
@@ -122,7 +122,7 @@ export default function ProfileAluno() {
 
               {disc.turmas.map((t) => (
                 <div key={t.classId} style={turmaRow}>
-                  <span style={{ fontSize: "13px", color: "#666" }}>
+                  <span style={{ fontSize: "13px", color: "var(--texto-suave)" }}>
                     {t.semestre}
                   </span>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -142,10 +142,10 @@ export default function ProfileAluno() {
   );
 }
 
-const container = { minHeight: "100vh", background: "#f5f5f5", padding: "30px" };
+const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
 const card = {
   maxWidth: "600px", margin: "0 auto 30px auto", padding: "25px",
-  background: "#fff", borderRadius: "10px",
+  background: "var(--bg-card)", borderRadius: "10px",
   boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
 };
 const avatarCircle = {
@@ -172,5 +172,5 @@ const buttonDanger = {
 };
 const buttonVoltar = {
   padding: "8px 16px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "#fff", cursor: "pointer"
+  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
 };

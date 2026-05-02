@@ -30,7 +30,7 @@ export default function Navbar() {
         onClick={handlePerfilClick}
         style={{
           ...buttonPerfil,
-          background: estaNoPerfil ? "#388E3C" : "#4CAF50",
+          background: estaNoPerfil ? "#a03030" : "var(--cor-primaria)",
         }}
         title={estaNoPerfil ? "Voltar" : "Meu perfil"}
       >
@@ -42,7 +42,7 @@ export default function Navbar() {
 
 const navbar = {
   position: "fixed", top: 0, left: 0, right: 0,
-  height: "56px", background: "#fff",
+  height: "56px", background: "var(--bg-card)",
   boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
   display: "flex", justifyContent: "space-between",
   alignItems: "center", padding: "0 24px", zIndex: 100

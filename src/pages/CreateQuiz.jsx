@@ -137,7 +137,7 @@ export default function CreateQuiz() {
 
 const container = { padding: "20px", maxWidth: "700px", margin: "0 auto", textAlign: "center" };
 const card = {
-  background: "#fff", borderRadius: "10px", padding: "25px",
+  background: "var(--bg-card)", borderRadius: "10px", padding: "25px",
   boxShadow: "0 0 10px rgba(0,0,0,0.1)", marginTop: "20px"
 };
 const inputStyle = {
@@ -164,5 +164,5 @@ const buttonRemove = {
 };
 const buttonVoltar = {
   padding: "10px 20px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "#fff", cursor: "pointer"
+  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
 };

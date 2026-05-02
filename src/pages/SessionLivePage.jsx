@@ -5,6 +5,8 @@ import { db } from "../services/firebase";
 import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import RankingTable from "../components/RankingTable";
+import TwemojiImg from "../components/TwemojiImg";
 
 function SessionTimer({ questionIndex }) {
   const [seconds, setSeconds] = useState(0);
@@ -15,7 +17,12 @@ function SessionTimer({ questionIndex }) {
   }, [questionIndex]);
   const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
   const secs = String(seconds % 60).padStart(2, "0");
-  return <span style={timerText}>⏱ {mins}:{secs}</span>;
+  return (
+    <span style={timerText}>
+      <TwemojiImg codepoint="23f1" size={22} alt="timer" />
+      {" "}{mins}:{secs}
+    </span>
+  );
 }
 
 export default function SessionLivePage() {
@@ -119,42 +126,11 @@ export default function SessionLivePage() {
 
       {/* Placar */}
       <div style={placarCard}>
-        <DotLottieReact
-          src="https://lottie.host/d27aa6bc-5e72-47d9-b39d-2f95d7ad58b1/pNEe3jnJDU.lottie"
-          autoplay
-          loop
-          style={{ width: 120, height: 120, margin: "0 auto" }}
-        />
         <h2 style={{ marginBottom: "16px" }}>Placar ao vivo</h2>
-
         {players.length === 0 ? (
-          <p style={{ color: "#888" }}>Nenhum aluno entrou ainda.</p>
+          <p style={{ color: "var(--texto-suave)" }}>Nenhum aluno entrou ainda.</p>
         ) : (
-          <table style={tabela}>
-            <thead>
-              <tr>
-                <th style={thStyle}>#</th>
-                <th style={thStyle}>Aluno</th>
-                <th style={thStyle}>Pontos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...players]
-                .sort((a, b) => b.score - a.score)
-                .map((p, i) => (
-                  <tr key={p.id} style={{
-                    ...trStyle,
-                    background: i === 0 ? "#fffde7" : "transparent",
-                  }}>
-                    <td style={tdStyle}>
-                      {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: "left" }}>{p.nome}</td>
-                    <td style={tdStyle}>{p.score}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+          <RankingTable players={players} />
         )}
       </div>
 
@@ -180,7 +156,7 @@ export default function SessionLivePage() {
 }
 
 const container = {
-  minHeight: "100vh", background: "#f5f5f5",
+  minHeight: "100vh", background: "var(--bg)",
   display: "flex", flexDirection: "column", paddingBottom: "80px"
 };
 const fullCenter = {
@@ -190,37 +166,42 @@ const fullCenter = {
 const spinnerStyle = {
   width: "36px", height: "36px", borderRadius: "50%",
   border: "4px solid #e0e0e0", borderTop: "4px solid #4CAF50",
-  animation: "spin 0.8s linear infinite"
+  animation: "spin 0.8s linear infinite", background: "var(--cor-primaria)"
 };
 const topBar = {
-  background: "#fff", padding: "16px 24px",
+  background: "var(--bg-card)", padding: "16px 24px",
   display: "flex", justifyContent: "space-between",
   alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.08)"
 };
-const quizLabel = { fontSize: "18px", fontWeight: "bold", color: "#222", margin: "0 0 4px" };
-const codigoLabel = { fontSize: "14px", color: "#666", margin: 0 };
+const quizLabel = { fontSize: "18px", fontWeight: "bold", color: "#222", margin: "0 0 4px", color: "var(--texto)"};
+const codigoLabel = { fontSize: "14px", color: "var(--texto-suave)", margin: 0 };
 const progressInfo = { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" };
-const timerText = { fontSize: "22px", fontWeight: "bold", color: "#4CAF50" };
-const progressText = { fontSize: "13px", color: "#888" };
+const timerText = {
+  fontSize: "22px", fontWeight: "bold",
+  color: "var(--cor-primaria)",
+  fontFamily: "'Fredoka One', sans-serif",
+  display: "flex", alignItems: "center", gap: "6px"
+};
+const progressText = { fontSize: "13px", color: "var(--texto-muito-suave)" };
 const responseBar = { maxWidth: "700px", margin: "20px auto 0", padding: "0 20px", width: "100%" };
 const responseText = { fontSize: "14px", color: "#555", marginBottom: "8px", textAlign: "center" };
-const progressBarFundo = { width: "100%", height: "10px", background: "#e0e0e0", borderRadius: "5px", overflow: "hidden" };
+const progressBarFundo = { width: "100%", height: "10px", background: "#e0e0e0", borderRadius: "5px", overflow: "hidden", background: "var(--borda)"};
 const progressBarPreenchida = (pct) => ({
   height: "100%", borderRadius: "5px", width: `${pct}%`,
-  background: "#4CAF50", transition: "width 0.4s ease"
+  background: "var(--cor-primaria)", transition: "width 0.4s ease"
 });
 const placarCard = {
   maxWidth: "700px", margin: "20px auto", padding: "20px",
-  background: "#fff", borderRadius: "12px",
+  background: "var(--bg-card)", borderRadius: "12px",
   boxShadow: "0 0 10px rgba(0,0,0,0.08)", width: "calc(100% - 40px)"
 };
 const tabela = { width: "100%", borderCollapse: "collapse" };
-const thStyle = { padding: "10px", fontSize: "12px", color: "#888", borderBottom: "2px solid #eee", textAlign: "center" };
+const thStyle = { padding: "10px", fontSize: "12px", color: "var(--texto-muito-suave)", borderBottom: "2px solid #eee", textAlign: "center" };
 const trStyle = { borderBottom: "1px solid #f0f0f0" };
 const tdStyle = { padding: "12px", fontSize: "15px", textAlign: "center" };
 const footer = {
   position: "fixed", bottom: 0, left: 0, right: 0,
-  background: "#fff", padding: "12px 24px",
+  background: "var(--bg-card)", padding: "12px 24px",
   display: "flex", justifyContent: "space-between",
   alignItems: "center", boxShadow: "0 -1px 8px rgba(0,0,0,0.08)"
 };

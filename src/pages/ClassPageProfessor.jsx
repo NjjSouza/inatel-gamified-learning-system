@@ -182,85 +182,59 @@ export default function ClassPageProfessor() {
 
             return (
               <div key={s.id} style={sessionCard}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ textAlign: "left" }}>
-                    <p style={{ margin: "0 0 4px", fontSize: "13px", color: "#666" }}>
-                      {`Código: ${s.pin} — ${s.status === "waiting" ? "Aguardando entrada dos alunos" : "Em andamento"}`}
-                    </p>
-                  </div>
-
-                  {s.status === "playing" && (
-                    <div style={{ textAlign: "right" }}>
-                      <SessionTimer key={`${s.id}-${s.currentQuestionIndex}`} />
-                      <p style={{ margin: "2px 0", fontSize: "13px" }}>
-                        Pergunta {current} de {total}
-                      </p>
-                      <p style={{ margin: "2px 0", fontSize: "13px", color: "#555" }}>
-                        {`${respondidos} de ${totalPlayers} alunos responderam`}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
                   {s.status === "waiting" && (
-                    <button
-                      onClick={async () => {
-                        await startSession(s.id);
-                        navigate(`/professor/sessao/${s.id}`);
-                      }}
-                      style={buttonPrimary}
-                    >
-                      Iniciar
-                    </button>
-                  )}
-                  {s.status === "playing" && (
                     <>
-                      <button
-                        onClick={() => nextQuestion(s.id, s.currentQuestionIndex || 0, total)}
-                        disabled={(s.currentQuestionIndex ?? 0) >= total - 1}
-                        style={buttonPrimary}
-                      >
-                        Próxima Pergunta
-                      </button>
-                      <button
-                        onClick={() => finishSession(s.id, s.quizId)}
-                        style={buttonSecondary}
-                      >
-                        Encerrar sessão
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center" }}>
+                        <div>
+                          <p style={{ fontWeight: "bold", fontSize: "13px", color: "var(--cor-primaria)", margin: 0 }}>
+                            Código de entrada: {s.pin}
+                          </p>
+                          
+                          <p style={{ fontSize: "13px", color: "var(--texto-suave)", margin: "4px 0 0 0" }}>
+                            Aguardando entrada dos alunos
+                          </p>
+                        </div>
+                        
+                        <div style={{
+                          marginLeft: "auto",
+                          display: "flex",
+                          flexDirection: "row",
+                          gap: "10px",
+                          alignItems: "center"  
+                        }}>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(s.pin);
+                              alert("Código copiado!");
+                            }}
+                            style={buttonSecondary}
+                          >
+                            Copiar código
+                          </button>
+
+                          <button
+                            onClick={async () => {
+                              await startSession(s.id);
+                              navigate(`/professor/sessao/${s.id}`);
+                            }}
+                            style={buttonPrimary}
+                          >
+                            Iniciar
+                          </button>
+                        </div>
+                      </div>
                     </>
                   )}
-                  <button
-                    onClick={() => setShowRanking(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
-                    style={buttonSecondary}
-                  >
-                    {showRanking[s.id] ? "Ocultar placar" : "Ver placar"}
-                  </button>
+                  {s.status === "playing" && (
+                    <button
+                      onClick={() => navigate(`/professor/sessao/${s.id}`)}
+                      style={buttonPrimary}
+                    >
+                      Ver sessão ao vivo
+                    </button>
+                  )}
                 </div>
-
-                {showRanking[s.id] && players.length > 0 && (
-                  <table style={{ width: "100%", marginTop: "10px", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>#</th>
-                        <th style={thStyle}>Aluno</th>
-                        <th style={thStyle}>Pontos</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...players]
-                        .sort((a, b) => b.score - a.score)
-                        .map((p, i) => (
-                          <tr key={p.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                            <td style={tdStyle}>{i + 1}</td>
-                            <td style={tdStyle}>{p.nome}</td>
-                            <td style={tdStyle}>{p.score}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                )}
               </div>
             );
           })
@@ -284,7 +258,7 @@ export default function ClassPageProfessor() {
                 >
                   <div style={{ textAlign: "left" }}>
                     <strong>{quiz?.nome || "Quiz"}</strong>
-                    <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#666" }}>
+                    <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--texto-suave)" }}>
                       {s.finishedAt?.toDate
                         ? s.finishedAt.toDate().toLocaleDateString("pt-BR")
                         : "—"}
@@ -389,16 +363,16 @@ export default function ClassPageProfessor() {
   );
 }
 
-const container = { minHeight: "100vh", background: "#f5f5f5", padding: "30px" };
+const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
 const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
   maxWidth: "700px", margin: "0 auto 30px auto", padding: "20px",
-  background: "#fff", borderRadius: "10px",
+  background: "var(--bg-card)", borderRadius: "10px",
   boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
 };
-const sectionLabel = { fontWeight: "bold", textAlign: "center", marginBottom: "8px", color: "#333" };
+const sectionLabel = { fontWeight: "bold", textAlign: "center", marginBottom: "8px", color: "var(--texto)" };
 const sessionCard = {
-  border: "1px solid #ccc", borderRadius: "10px",
+  border: "1px solid var(--borda)", borderRadius: "10px",
   padding: "15px", marginBottom: "15px", textAlign: "left"
 };
 const inputStyle = {
@@ -410,7 +384,7 @@ const buttonPrimary = {
 };
 const buttonSecondary = {
   padding: "8px 12px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "#fff", cursor: "pointer"
+  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
 };
 const buttonDanger = {
   padding: "8px 12px", borderRadius: "8px", border: "none",
@@ -420,12 +394,12 @@ const cardButton = {
   width: "100%", padding: "10px", marginBottom: "10px",
   borderRadius: "8px", border: "1px solid #ccc", cursor: "pointer"
 };
-const thStyle = { padding: "8px", fontSize: "12px", color: "#888", borderBottom: "2px solid #eee" };
+const thStyle = { padding: "8px", fontSize: "12px", color: "var(--texto-muito-suave)", borderBottom: "2px solid #eee" };
 const tdStyle = { padding: "10px", fontSize: "14px", textAlign: "center" };
 const historicoButton = {
   width: "100%", display: "flex", justifyContent: "space-between",
   alignItems: "center", background: "none", border: "none",
-  cursor: "pointer", padding: 0
+  cursor: "pointer", padding: 0, color: "var(--texto)"
 };
 const percentualBadge = (pct) => ({
   display: "inline-block", padding: "4px 10px", borderRadius: "20px",
@@ -438,7 +412,7 @@ const questaoRow = {
   gap: "12px", padding: "8px 0", borderBottom: "1px solid #f0f0f0"
 };
 const barraFundo = {
-  width: "80px", height: "8px", background: "#eee",
+  width: "80px", height: "8px", background: "var(--borda)",
   borderRadius: "4px", overflow: "hidden"
 };
 const barraPreenchida = (pct) => ({

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCourses } from "../hooks/useCourses";
 import { useClasses } from "../hooks/useClasses";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 export default function ProfileProfessor() {
   const { user, logout } = useAuth();
@@ -50,9 +51,16 @@ export default function ProfileProfessor() {
         <h2 style={{ marginTop: "15px", marginBottom: "4px" }}>
           {user?.nome || "Professor"}
         </h2>
-        <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
+        <p style={{ color: "var(--texto-muito-suave)", fontSize: "14px", margin: 0 }}>
           {user?.email}
         </p>
+
+        <DotLottieReact
+          src="https://lottie.host/be439f2a-2a11-4425-8b5e-b82a42989f9f/8EbJ2FnIF7.lottie"
+          autoplay
+          loop
+          style={{ width: 200, height: 200, margin: "0 auto" }}
+        />
 
         <button onClick={handleLogout} style={{ ...buttonDanger, marginTop: "20px" }}>
           Sair
@@ -72,7 +80,7 @@ export default function ProfileProfessor() {
             <div key={disc.id} style={discCard}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <strong>{disc.nome}</strong>
-                <span style={{ fontSize: "13px", color: "#888" }}>
+                <span style={{ fontSize: "13px", color: "var(--texto-muito-suave)" }}>
                   {disc.total} {disc.total === 1 ? "turma" : "turmas"}
                 </span>
               </div>
@@ -97,10 +105,10 @@ export default function ProfileProfessor() {
   );
 }
 
-const container = { minHeight: "100vh", background: "#f5f5f5", padding: "30px" };
+const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
 const card = {
   maxWidth: "600px", margin: "0 auto 30px auto", padding: "25px",
-  background: "#fff", borderRadius: "10px",
+  background: "var(--bg-card)", borderRadius: "10px",
   boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
 };
 const avatarCircle = {
@@ -118,14 +126,10 @@ const badgeAtiva = {
   fontSize: "12px", padding: "3px 8px", borderRadius: "12px"
 };
 const badgeEncerrada = {
-  background: "#f5f5f5", color: "#999", fontWeight: "bold",
+  background: "var(--bg)", color: "#999", fontWeight: "bold",
   fontSize: "12px", padding: "3px 8px", borderRadius: "12px"
 };
 const buttonDanger = {
   padding: "8px 20px", borderRadius: "8px", border: "none",
   background: "#f44336", color: "#fff", cursor: "pointer", fontWeight: "bold"
-};
-const buttonVoltar = {
-  padding: "8px 16px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "#fff", cursor: "pointer"
 };

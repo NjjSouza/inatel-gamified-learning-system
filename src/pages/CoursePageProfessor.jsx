@@ -103,11 +103,11 @@ function CoursePageProfessor() {
   );
 }
 
-const container = { minHeight: "100vh", background: "#f5f5f5", padding: "30px" };
+const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
 const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
   maxWidth: "700px", margin: "0 auto 30px auto", padding: "20px",
-  background: "#fff", borderRadius: "10px",
+  background: "var(--bg-card)", borderRadius: "10px",
   boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
 };
 const inputStyle = {
@@ -119,7 +119,7 @@ const buttonPrimary = {
 };
 const buttonVoltar = {
   padding: "8px 16px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "#fff", cursor: "pointer"
+  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
 };
 const cardButton = {
   width: "100%", padding: "10px", marginBottom: "10px",

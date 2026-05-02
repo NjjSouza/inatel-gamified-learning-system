@@ -41,14 +41,14 @@ export default function SessionPlayer() {
     return () => unsub();
   }, [sessionId]);
 
-  // Carrega e embaralha perguntas
+  // Carrega e embaralha perguntas quando quiz é identificado
   useEffect(() => {
     if (!session?.quizId) return;
     const fetch = async () => {
       const data = await getQuestions(session.quizId);
       setShuffledQuestions(shuffleArray(data));
     };
-  fetch();
+    fetch();
   }, [session?.quizId]);
 
   // Embaralha alternativas a cada nova pergunta
@@ -62,7 +62,7 @@ export default function SessionPlayer() {
     setAnswered(false);
   }, [session?.currentQuestionIndex, shuffledQuestions]);
 
-  // Busca o jogador na sessão
+  // Busca o registro do jogador nesta sessão
   useEffect(() => {
     if (!user) return;
     const fetchPlayer = async () => {
@@ -77,9 +77,12 @@ export default function SessionPlayer() {
     fetchPlayer();
   }, [sessionId, user]);
 
-  // Mostra overlay de troféu quando sessão encerra
+  // Exibe overlay de vitória ao encerrar (apenas uma vez por sessão)
   useEffect(() => {
-    if (session?.status === "finished") {
+    if (session?.status !== "finished") return;
+    const key = `overlay_shown_${sessionId}`;
+    if (!sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, "true");
       setShowFinishedOverlay(true);
     }
   }, [session?.status]);
@@ -93,19 +96,17 @@ export default function SessionPlayer() {
         where("sessionId", "==", sessionId)
       );
       const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setFinalPlayers(data);
+      setFinalPlayers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     };
     fetchPlayers();
   }, [session?.status]);
 
+  // Tela de carregamento inicial
   if (!session) return (
-    <div style={fullCenter}>
-      <div style={spinnerStyle} />
-    </div>
+    <div style={fullCenter}><div style={spinnerStyle} /></div>
   );
 
-  // Tela de espera
+  // Tela de espera antes do professor iniciar
   if (session.status === "waiting") return (
     <div style={fullCenter}>
       <div style={waitingCard}>
@@ -114,31 +115,33 @@ export default function SessionPlayer() {
           autoplay
           loop
           style={{ width: 200, height: 200, margin: "0 auto" }}
-          />
+        />
         <p style={waitingText}>Aguardando o professor iniciar a sessão...</p>
         <p style={waitingSubtext}>Fique nesta tela. A sessão começará em breve.</p>
       </div>
     </div>
   );
 
-  // Tela de encerramento
+  // Tela de encerramento com overlay de vitória e ranking final
   if (session.status === "finished") return (
     <div style={fullCenter}>
       {showFinishedOverlay && (
-        <div style={{ textAlign: "center" }}>
-          <DotLottieReact
-            src="https://lottie.host/63e7884d-4599-4223-89b0-446d20a28c9c/2hTKas29T2.lottie"
-            autoplay
-            loop={false}
-            style={{ width: 200, height: 200, margin: "0 auto" }}
-          />
-        </div>
+        <LottieOverlay
+          src="https://lottie.host/63e7884d-4599-4223-89b0-446d20a28c9c/2hTKas29T2.lottie"
+          loop={false}
+          dark
+          duration={3000}
+          onFinish={() => setShowFinishedOverlay(false)}
+        />
       )}
       {!showFinishedOverlay && (
         <div style={{ ...finishedCard, maxWidth: "500px" }}>
           <h2 style={finishedTitle}>Sessão encerrada!</h2>
-          <p style={{ ...finishedSubtext, marginBottom: "20px" }}>
-            Bom trabalho! Seus pontos foram registrados.
+          <p style={{ ...finishedSubtext, marginBottom: "8px" }}>
+            Seus pontos foram registrados! 🎉
+          </p>
+          <p style={{ ...finishedSubtext, marginBottom: "20px", color: "#aaa", fontSize: "13px" }}>
+            Você já pode fechar esta página ou voltar ao início.
           </p>
           <RankingTable
             players={finalPlayers}
@@ -155,12 +158,13 @@ export default function SessionPlayer() {
   );
 
   return (
-    <div style={container}>
-      {/* Overlay de comemoração ao responder */}
+    <div style={container} className="fundo-quiz">
+      {/* Overlay de comemoração ao responder — aparece uma vez, sem loop */}
       {showAnswerOverlay && (
         <LottieOverlay
-          src="https://lottie.host/4dc5164b-745c-4298-bda6-06a5b3d54390/bwscDzTAcV.lottie"
-          duration={2000}
+          src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
+          loop
+          duration={3100}
           onFinish={() => setShowAnswerOverlay(false)}
         />
       )}
@@ -210,11 +214,12 @@ export default function SessionPlayer() {
 const fullCenter = {
   minHeight: "100vh", display: "flex",
   justifyContent: "center", alignItems: "center",
-  background: "#f5f5f5"
+  background: "var(--bg)"
 };
 const spinnerStyle = {
   width: "36px", height: "36px", borderRadius: "50%",
-  border: "4px solid #e0e0e0", borderTop: "4px solid #4CAF50",
+  border: "4px solid var(--borda)",
+  borderTop: `4px solid var(--cor-primaria)`,
   animation: "spin 0.8s linear infinite"
 };
 const waitingCard = {
@@ -223,33 +228,35 @@ const waitingCard = {
   maxWidth: "400px", width: "90%"
 };
 const waitingText = {
-  fontSize: "18px", fontWeight: "bold", color: "#333", margin: "16px 0 8px"
+  fontSize: "18px", fontWeight: "bold", color: "var(--texto)", margin: "16px 0 8px"
 };
-const waitingSubtext = { fontSize: "14px", color: "#888", margin: 0 };
+const waitingSubtext = { fontSize: "14px", color: "var(--texto-muito-suave)", margin: 0 };
 const finishedCard = {
-  textAlign: "center", padding: "40px", background: "#fff",
+  textAlign: "center", padding: "40px", background: "var(--bg-card)",
   borderRadius: "16px", boxShadow: "0 0 20px rgba(0,0,0,0.08)",
   width: "90%", animation: "fadeInUp 0.5s ease"
 };
-const finishedTitle = { margin: "0 0 8px", color: "#333" };
-const finishedSubtext = { fontSize: "14px", color: "#888", margin: 0 };
+const finishedTitle = { margin: "0 0 8px", color: "var(--texto)" };
+const finishedSubtext = { fontSize: "14px", color: "var(--texto-muito-suave)", margin: 0 };
 const container = {
-  minHeight: "100vh", background: "#f5f5f5",
-  display: "flex", justifyContent: "center", alignItems: "center"
+  minHeight: "100vh",
+  display: "flex", justifyContent: "center", alignItems: "center",
+  background: "transparent", 
 };
 const card = {
   width: "100%", maxWidth: "600px", padding: "25px",
-  background: "#fff", borderRadius: "10px",
-  boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
+  background: "var(--bg-card)", borderRadius: "10px",
+  boxShadow: "0 0 10px var(--sombra)", textAlign: "center"
 };
-const questionCounter = { fontSize: "13px", color: "#888", margin: "0 0 12px" };
-const questionText = { fontSize: "20px", marginBottom: "24px", color: "#333" };
+const questionCounter = { fontSize: "13px", color: "var(--texto-muito-suave)", margin: "0 0 12px" };
+const questionText = { fontSize: "20px", marginBottom: "24px", color: "var(--texto)" };
 const answersContainer = { display: "flex", flexDirection: "column", gap: "10px" };
 const answerButton = {
   padding: "14px", borderRadius: "8px", border: "none",
-  background: "#4CAF50", color: "#fff",
+  background: "var(--cor-primaria)", color: "#fff",
   fontWeight: "bold", fontSize: "15px", transition: "opacity 0.2s"
 };
 const answeredFeedback = {
-  marginTop: "16px", fontSize: "15px", color: "#4CAF50", fontWeight: "bold"
+  marginTop: "16px", fontSize: "15px",
+  color: "var(--cor-primaria)", fontWeight: "bold"
 };

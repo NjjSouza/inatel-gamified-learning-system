@@ -73,15 +73,15 @@ export default function JoinSession() {
 const container = {
   minHeight: "100vh", display: "flex",
   justifyContent: "center", alignItems: "center",
-  background: "#f5f5f5", paddingTop: "56px"
+  background: "var(--bg)", paddingTop: "56px"
 };
 const card = {
   width: "100%", maxWidth: "400px", padding: "32px",
-  background: "#fff", borderRadius: "12px",
+  background: "var(--bg-card)", borderRadius: "12px",
   boxShadow: "0 0 16px rgba(0,0,0,0.08)", textAlign: "center"
 };
-const title = { margin: "16px 0 8px", fontSize: "22px", color: "#333" };
-const subtitle = { margin: "0 0 24px", fontSize: "14px", color: "#888" };
+const title = { margin: "16px 0 8px", fontSize: "22px", color: "var(--texto)" };
+const subtitle = { margin: "0 0 24px", fontSize: "14px", color: "var(--texto-muito-suave)" };
 const inputStyle = {
   width: "100%", padding: "12px", marginBottom: "12px",
   borderRadius: "8px", border: "1px solid #ccc",

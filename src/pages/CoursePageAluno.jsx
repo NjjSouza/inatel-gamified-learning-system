@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
+import RankingTable from "../components/RankingTable";
 
 function getNivel(xp) {
   if (xp <= 200) return { label: "Pedra", emoji: "🪨" };
@@ -141,7 +142,7 @@ export default function CoursePageAluno() {
             ? (userSnap.data().nome || userSnap.data().email)
             : "Aluno";
           const xp = xpPorUsuario[uid] || 0;
-          return { uid, nome, xp, nivel: getNivel(xp) };
+          return { id: uid, nome, xp, nivel: getNivel(xp) };
         })
       );
 
@@ -215,44 +216,22 @@ export default function CoursePageAluno() {
         ) : ranking.length === 0 ? (
           <p>Nenhum aluno com XP ainda.</p>
         ) : (
-          <table style={tabela}>
-            <thead>
-              <tr>
-                <th style={thStyle}>#</th>
-                <th style={thStyle}>Aluno</th>
-                <th style={thStyle}>Nível</th>
-                <th style={thStyle}>XP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranking.map((aluno, i) => (
-                <tr
-                  key={aluno.uid}
-                  style={{
-                    ...trStyle,
-                    background: aluno.uid === user.uid ? "#f0fff0" : "transparent",
-                    fontWeight: aluno.uid === user.uid ? "bold" : "normal",
-                  }}
-                >
-                  <td style={tdStyle}>{i + 1}</td>
-                  <td style={tdStyle}>{aluno.nome}</td>
-                  <td style={tdStyle}>{aluno.nivel.emoji} {aluno.nivel.label}</td>
-                  <td style={tdStyle}>{aluno.xp}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <RankingTable
+            players={ranking}
+            highlightUserId={user.uid}
+            showNivel={true}
+          />
         )}
       </div>
     </div>
   );
 }
 
-const container = { minHeight: "100vh", background: "#f5f5f5", padding: "30px" };
+const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
 const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
   maxWidth: "600px", margin: "0 auto 30px auto", padding: "20px",
-  background: "#fff", borderRadius: "10px",
+  background: "var(--bg-card)", borderRadius: "10px",
   boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
 };
 const statsGrid = {
@@ -260,25 +239,25 @@ const statsGrid = {
   gap: "15px", marginTop: "15px"
 };
 const statBox = {
-  background: "#f5f5f5", borderRadius: "10px", padding: "20px 10px",
+  background: "var(--bg)", borderRadius: "10px", padding: "20px 10px",
   display: "flex", flexDirection: "column", alignItems: "center", gap: "6px"
 };
 const statNumber = { fontSize: "28px", fontWeight: "bold", color: "#4CAF50" };
-const statLabel = { fontSize: "13px", color: "#666" };
+const statLabel = { fontSize: "13px", color: "var(--texto-suave)" };
 const nivelBadge = {
   display: "flex", alignItems: "center", justifyContent: "center",
   gap: "8px", marginBottom: "15px"
 };
 const nivelEmoji = { fontSize: "32px" };
-const nivelLabel = { fontSize: "20px", fontWeight: "bold", color: "#555" };
+const nivelLabel = { fontSize: "20px", fontWeight: "bold", color: "var(--texto-suave)" };
 const tabela = { width: "100%", borderCollapse: "collapse", marginTop: "10px" };
 const thStyle = {
   padding: "10px", borderBottom: "2px solid #eee",
-  fontSize: "13px", color: "#888", textAlign: "center"
+  fontSize: "13px", color: "var(--texto-muito-suave)", textAlign: "center"
 };
 const trStyle = { borderBottom: "1px solid #f0f0f0" };
 const tdStyle = { padding: "10px", textAlign: "center", fontSize: "14px" };
 const buttonVoltar = {
   padding: "8px 16px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "#fff", cursor: "pointer"
+  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
 };
