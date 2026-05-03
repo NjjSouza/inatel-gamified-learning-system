@@ -90,7 +90,7 @@ const inputStyle = {
 };
 const buttonPrimary = {
   width: "100%", padding: "12px", borderRadius: "8px",
-  border: "none", background: "#4CAF50", color: "#fff",
+  border: "none", background: "#32ae36", color: "#fff",
   fontSize: "16px", fontWeight: "bold", cursor: "pointer"
 };
-const errorText = { marginTop: "12px", color: "#f44336", fontSize: "14px" };
+const errorText = { marginTop: "12px", color: "var(--cor-primaria)", fontSize: "14px" };

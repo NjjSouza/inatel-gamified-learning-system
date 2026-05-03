@@ -8,6 +8,7 @@ import { useSessions } from "../hooks/useSessions";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import LottieOverlay from "../components/LottieOverlay";
 import RankingTable from "../components/RankingTable";
+import Spinner from "../components/Spinner";
 
 function shuffleArray(array) {
   const arr = [...array];
@@ -102,9 +103,7 @@ export default function SessionPlayer() {
   }, [session?.status]);
 
   // Tela de carregamento inicial
-  if (!session) return (
-    <div style={fullCenter}><div style={spinnerStyle} /></div>
-  );
+  if (!session) return <Spinner />;
 
   // Tela de espera antes do professor iniciar
   if (session.status === "waiting") return (
@@ -153,59 +152,59 @@ export default function SessionPlayer() {
   );
 
   const current = shuffledQuestions[session.currentQuestionIndex];
-  if (!current || shuffledAlts.length === 0) return (
-    <div style={fullCenter}><div style={spinnerStyle} /></div>
-  );
+  if (!current || shuffledAlts.length === 0) return <Spinner />;
 
   return (
-    <div style={container} className="fundo-quiz">
-      {/* Overlay de comemoração ao responder — aparece uma vez, sem loop */}
-      {showAnswerOverlay && (
-        <LottieOverlay
-          src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
-          loop
-          duration={3100}
-          onFinish={() => setShowAnswerOverlay(false)}
-        />
-      )}
-
-      <div style={card}>
-        <p style={questionCounter}>
-          Pergunta {session.currentQuestionIndex + 1} de {shuffledQuestions.length}
-        </p>
-
-        <h3 style={questionText}>{current.pergunta}</h3>
-
-        <div style={answersContainer}>
-          {shuffledAlts.map((alt, index) => (
-            <button
-              key={index}
-              disabled={answered}
-              onClick={async () => {
-                if (!playerId) return;
-                const isCorrect = current.respostaCorreta === alt.originalIndex;
-                await submitAnswer(
-                  playerId, sessionId, current.id,
-                  session.currentQuestionIndex, alt.originalIndex,
-                  isCorrect, user.uid, session.classId
-                );
-                setAnswered(true);
-                setShowAnswerOverlay(true);
-              }}
-              style={{
-                ...answerButton,
-                opacity: answered ? 0.7 : 1,
-                cursor: answered ? "default" : "pointer",
-              }}
-            >
-              {alt.texto}
-            </button>
-          ))}
-        </div>
-
-        {answered && !showAnswerOverlay && (
-          <p style={answeredFeedback}>Resposta registrada! 🎉</p>
+    <div className="fundo-quiz" style={{ minHeight: "100vh" }}>
+      <div style={container}>
+        {/* Overlay de comemoração ao responder — aparece uma vez, sem loop */}
+        {showAnswerOverlay && (
+          <LottieOverlay
+            src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
+            loop
+            duration={3100}
+            onFinish={() => setShowAnswerOverlay(false)}
+          />
         )}
+
+        <div style={card}>
+          <p style={questionCounter}>
+            Pergunta {session.currentQuestionIndex + 1} de {shuffledQuestions.length}
+          </p>
+
+          <h3 style={questionText}>{current.pergunta}</h3>
+
+          <div style={answersContainer}>
+            {shuffledAlts.map((alt, index) => (
+              <button
+                key={index}
+                disabled={answered}
+                onClick={async () => {
+                  if (!playerId) return;
+                  const isCorrect = current.respostaCorreta === alt.originalIndex;
+                  await submitAnswer(
+                    playerId, sessionId, current.id,
+                    session.currentQuestionIndex, alt.originalIndex,
+                    isCorrect, user.uid, session.classId
+                  );
+                  setAnswered(true);
+                  setShowAnswerOverlay(true);
+                }}
+                style={{
+                  ...answerButton,
+                  opacity: answered ? 0.7 : 1,
+                  cursor: answered ? "default" : "pointer",
+                }}
+              >
+                {alt.texto}
+              </button>
+            ))}
+          </div>
+
+          {answered && !showAnswerOverlay && (
+            <p style={answeredFeedback}>Resposta registrada! 🎉</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -216,15 +215,9 @@ const fullCenter = {
   justifyContent: "center", alignItems: "center",
   background: "var(--bg)"
 };
-const spinnerStyle = {
-  width: "36px", height: "36px", borderRadius: "50%",
-  border: "4px solid var(--borda)",
-  borderTop: `4px solid var(--cor-primaria)`,
-  animation: "spin 0.8s linear infinite"
-};
 const waitingCard = {
-  textAlign: "center", padding: "40px", background: "#fff",
-  borderRadius: "16px", boxShadow: "0 0 20px rgba(0,0,0,0.08)",
+  textAlign: "center", padding: "40px", background: "var(--bg-card)",
+  borderRadius: "16px", boxShadow: "0 0 20px var(--sombra)",
   maxWidth: "400px", width: "90%"
 };
 const waitingText = {
@@ -241,7 +234,6 @@ const finishedSubtext = { fontSize: "14px", color: "var(--texto-muito-suave)", m
 const container = {
   minHeight: "100vh",
   display: "flex", justifyContent: "center", alignItems: "center",
-  background: "transparent", 
 };
 const card = {
   width: "100%", maxWidth: "600px", padding: "25px",
@@ -253,10 +245,10 @@ const questionText = { fontSize: "20px", marginBottom: "24px", color: "var(--tex
 const answersContainer = { display: "flex", flexDirection: "column", gap: "10px" };
 const answerButton = {
   padding: "14px", borderRadius: "8px", border: "none",
-  background: "var(--cor-primaria)", color: "#fff",
+  background: "#32ae36", color: "#fff",
   fontWeight: "bold", fontSize: "15px", transition: "opacity 0.2s"
 };
 const answeredFeedback = {
   marginTop: "16px", fontSize: "15px",
-  color: "var(--cor-primaria)", fontWeight: "bold"
+  color: "#32ae36", fontWeight: "bold"
 };

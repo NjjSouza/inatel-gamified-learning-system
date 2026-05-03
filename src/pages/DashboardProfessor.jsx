@@ -147,7 +147,7 @@ function DashboardProfessor() {
   );
 }
 
-const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
+const container = { minHeight: "100vh", background: "transparent", padding: "30px" };
 const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
   maxWidth: "700px", margin: "0 auto 30px auto", padding: "20px",
@@ -160,7 +160,7 @@ const inputStyle = {
 };
 const buttonPrimary = {
   padding: "10px 15px", borderRadius: "8px", border: "none",
-  background: "#4CAF50", color: "white", cursor: "pointer", fontWeight: "bold"
+  background: "#32ae36", color: "white", cursor: "pointer", fontWeight: "bold"
 };
 const buttonLogout = {
   marginTop: "10px", padding: "8px 12px", borderRadius: "8px",
@@ -168,7 +168,7 @@ const buttonLogout = {
 };
 const buttonDanger = {
   padding: "8px 12px", borderRadius: "8px", border: "none",
-  background: "#f44336", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "var(--cor-primaria)", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };
 const cardButton = {
   width: "100%", padding: "10px", marginBottom: "10px",

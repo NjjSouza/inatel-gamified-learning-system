@@ -43,7 +43,7 @@ return (
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        background: "var(--bg)"
+        background: "transparent"
       }}>
         <div style={{
           width: "400px",

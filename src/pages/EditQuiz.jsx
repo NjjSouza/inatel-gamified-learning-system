@@ -260,10 +260,10 @@ export default function EditQuiz() {
                   <ol style={{ marginTop: "8px", paddingLeft: "16px", listStyleType: "lower-alpha" }}>
                     {q.alternativas.map((alt, idx) => (
                       <li key={idx} style={{
-                        color: idx === q.respostaCorreta ? "#4CAF50" : "inherit",
+                        color: idx === q.respostaCorreta ? "#32ae36" : "inherit",
                         fontWeight: idx === q.respostaCorreta ? "bold" : "normal"
                       }}>
-                        {alt} {idx === q.respostaCorreta && "☑"}
+                        {alt} {idx === q.respostaCorreta}
                       </li>
                     ))}
                   </ol>
@@ -290,7 +290,7 @@ const sectionLabel = { fontWeight: "bold", textAlign: "left", marginBottom: "8px
 const altRow = { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" };
 const buttonPrimary = {
   padding: "10px 20px", borderRadius: "8px", border: "none",
-  background: "#4CAF50", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "#32ae36", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };
 const buttonSecondary = {
   padding: "8px 14px", borderRadius: "8px",
@@ -299,17 +299,17 @@ const buttonSecondary = {
 };
 const buttonRemove = {
   padding: "6px 10px", borderRadius: "6px", border: "none",
-  background: "#f44336", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "var(--cor-primaria)", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };
 const buttonEdit = {
   padding: "6px 10px", borderRadius: "6px", border: "none",
-  background: "#2196F3", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "#32ae36", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };
 const buttonVoltar = {
   padding: "10px 20px", borderRadius: "8px",
   border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
 };
 const questionCard = {
-  listStyle: "none", marginBottom: "15px", padding: "15px",
+  background: "var(--bg-card)", listStyle: "none", marginBottom: "15px", padding: "15px",
   border: "1px solid #ccc", borderRadius: "10px", textAlign: "left"
 };

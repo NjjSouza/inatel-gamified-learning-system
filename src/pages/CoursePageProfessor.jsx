@@ -91,7 +91,7 @@ function CoursePageProfessor() {
               <span>{c.semestre}</span>
               <span style={{
                 fontSize: "12px",
-                color: c.status === "active" ? "#4CAF50" : "#999"
+                color: c.status === "active" ? "#32ae36" : "#999"
               }}>
                 {c.status === "active" ? "Ativa" : "Encerrada"}
               </span>
@@ -103,7 +103,7 @@ function CoursePageProfessor() {
   );
 }
 
-const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
+const container = { minHeight: "100vh", background: "transparent", padding: "30px" };
 const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
   maxWidth: "700px", margin: "0 auto 30px auto", padding: "20px",
@@ -115,11 +115,7 @@ const inputStyle = {
 };
 const buttonPrimary = {
   padding: "10px", borderRadius: "8px", border: "none",
-  background: "#4CAF50", color: "#fff", cursor: "pointer", fontWeight: "bold"
-};
-const buttonVoltar = {
-  padding: "8px 16px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
+  background: "#32ae36", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };
 const cardButton = {
   width: "100%", padding: "10px", marginBottom: "10px",

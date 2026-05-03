@@ -40,7 +40,7 @@ export default function Register() {
       <div style={{
         height: "100vh", display: "flex",
         justifyContent: "center", alignItems: "center",
-        background: "var(--bg)"
+        background: "transparent"
       }}>
         <div style={{
           width: "320px", padding: "25px",
@@ -89,7 +89,7 @@ export default function Register() {
             </button>
           </div>
 
-          {erro && <p style={{ color: "red", fontSize: "14px" }}>{erro}</p>}
+          {erro && <p style={{ color: "var(--cor-primaria)", fontSize: "14px" }}>{erro}</p>}
 
           <button
             onClick={handleRegister}

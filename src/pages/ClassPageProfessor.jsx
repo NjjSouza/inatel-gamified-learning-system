@@ -6,28 +6,34 @@ import { useQuizzes } from "../hooks/useQuizzes";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
-
-function SessionTimer() {
+import TwemojiImg from "../components/TwemojiImg";
+ 
+function SessionTimer({ sessionId }) {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
     setSeconds(0);
     const interval = setInterval(() => setSeconds(s => s + 1), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [sessionId]);
   const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
   const secs = String(seconds % 60).padStart(2, "0");
-  return <p style={{ fontWeight: "bold", color: "#4CAF50" }}>⏱ {mins}:{secs}</p>;
+  return (
+    <span style={timerText}>
+      <TwemojiImg codepoint="23f1" size={18} alt="timer" />
+      {" "}{mins}:{secs}
+    </span>
+  );
 }
 
 export default function ClassPageProfessor() {
   const { courseId, classId } = useParams();
   const navigate = useNavigate();
-
+ 
   const { getEnrollments, enrollByEmail, closeClass } = useClasses();
   const { createSession, startSession, finishSession,
           nextQuestion, listenPlayers, listenSessionsByClass } = useSessions();
   const { getQuizzes, getQuestions } = useQuizzes();
-
+ 
   const [classData, setClassData] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
@@ -35,33 +41,32 @@ export default function ClassPageProfessor() {
   const [questionsCount, setQuestionsCount] = useState({});
   const [playersBySession, setPlayersBySession] = useState({});
   const [respondidosPorSessao, setRespondidosPorSessao] = useState({});
-  const [showRanking, setShowRanking] = useState({});
   const [enrollments, setEnrollments] = useState([]);
   const [enrollEmail, setEnrollEmail] = useState("");
   const [expandedSession, setExpandedSession] = useState(null);
-
+ 
   const sessoesAtivas = sessions.filter(s => s.status !== "finished");
   const historico = sessions.filter(s => s.status === "finished");
-
+ 
   useEffect(() => {
     const fetch = async () => {
       const d = await getDoc(doc(db, "classes", classId));
       if (d.exists()) setClassData({ id: d.id, ...d.data() });
-
+ 
       const enrollData = await getEnrollments(classId);
       setEnrollments(enrollData);
-
+ 
       const quizzesData = await getQuizzes();
       setQuizzes(quizzesData);
     };
     fetch();
   }, [classId]);
-
+ 
   useEffect(() => {
     const unsub = listenSessionsByClass(classId, setSessions);
     return () => unsub();
   }, [classId]);
-
+ 
   useEffect(() => {
     const fetchCounts = async () => {
       const counts = {};
@@ -73,7 +78,7 @@ export default function ClassPageProfessor() {
     };
     if (quizzes.length) fetchCounts();
   }, [quizzes]);
-
+ 
   useEffect(() => {
     const unsubs = sessions.map((s) =>
       listenPlayers(s.id, (players) => {
@@ -82,7 +87,7 @@ export default function ClassPageProfessor() {
     );
     return () => unsubs.forEach(u => u());
   }, [sessions]);
-
+ 
   useEffect(() => {
     const novoRespondidos = {};
     sessions
@@ -99,14 +104,14 @@ export default function ClassPageProfessor() {
       });
     setRespondidosPorSessao(novoRespondidos);
   }, [sessions, playersBySession]);
-
+ 
   const handleCreateSession = async () => {
     if (!selectedQuiz) return alert("Selecione um quiz!");
     const session = await createSession(selectedQuiz.id, courseId, classId);
     alert(`Sessão criada com sucesso! Código: ${session.pin}`);
     setSelectedQuiz(null);
   };
-
+ 
   const handleEnroll = async () => {
     if (!enrollEmail.trim()) return alert("Digite o e-mail");
     try {
@@ -119,7 +124,7 @@ export default function ClassPageProfessor() {
       alert("Erro: " + e.message);
     }
   };
-
+ 
   if (!classData) return <Spinner />;
 
   return (
@@ -128,7 +133,7 @@ export default function ClassPageProfessor() {
         <h1>Turma {classData.semestre}</h1>
         <span style={{
           fontSize: "14px",
-          color: classData.status === "active" ? "#4CAF50" : "#999"
+          color: classData.status === "active" ? "#32ae36" : "var(--cor-primaria)"
         }}>
           {classData.status === "active" ? "Ativa" : "Encerrada"}
         </span>
@@ -139,7 +144,7 @@ export default function ClassPageProfessor() {
         <div style={card}>
           <h2>Criar Sessão</h2>
           <p style={sectionLabel}>Selecione o quiz:</p>
-
+ 
           {quizzes.length === 0 ? (
             <p>Você ainda não criou nenhum quiz.</p>
           ) : (
@@ -149,7 +154,12 @@ export default function ClassPageProfessor() {
                 onClick={() => setSelectedQuiz(prev => prev?.id === q.id ? null : q)}
                 style={{
                   ...cardButton,
-                  background: selectedQuiz?.id === q.id ? "#ddd" : "#f9f9f9"
+                  background: selectedQuiz?.id === q.id
+                    ? "#e8f5e9"
+                    : "var(--bg)",
+                  borderColor: selectedQuiz?.id === q.id
+                    ? "#32ae36"
+                    : "var(--borda)",
                 }}
               >
                 {q.nome}
@@ -168,7 +178,7 @@ export default function ClassPageProfessor() {
       {/* Sessões ativas */}
       <div style={card}>
         <h2>Sessões Ativas</h2>
-
+        
         {sessoesAtivas.length === 0 ? (
           <p>Nenhuma sessão ativa no momento.</p>
         ) : (
@@ -178,61 +188,52 @@ export default function ClassPageProfessor() {
             const players = playersBySession[s.id] || [];
             const totalPlayers = players.length;
             const respondidos = respondidosPorSessao[s.id] || 0;
-            const quiz = quizzes.find(q => q.id === s.quizId);
 
             return (
               <div key={s.id} style={sessionCard}>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" }}>
                   {s.status === "waiting" && (
-                    <>
-                      <div style={{ display: "flex", alignItems: "center" }}>
-                        <div>
-                          <p style={{ fontWeight: "bold", fontSize: "13px", color: "var(--cor-primaria)", margin: 0 }}>
-                            Código de entrada: {s.pin}
-                          </p>
-                          
-                          <p style={{ fontSize: "13px", color: "var(--texto-suave)", margin: "4px 0 0 0" }}>
-                            Aguardando entrada dos alunos
-                          </p>
-                        </div>
-                        
-                        <div style={{
-                          marginLeft: "auto",
-                          display: "flex",
-                          flexDirection: "row",
-                          gap: "10px",
-                          alignItems: "center"  
-                        }}>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(s.pin);
-                              alert("Código copiado!");
-                            }}
-                            style={buttonSecondary}
-                          >
-                            Copiar código
-                          </button>
-
-                          <button
-                            onClick={async () => {
-                              await startSession(s.id);
-                              navigate(`/professor/sessao/${s.id}`);
-                            }}
-                            style={buttonPrimary}
-                          >
-                            Iniciar
-                          </button>
-                        </div>
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      width: "100%",
+                      gap: "12px"
+                    }}>
+                      <div style={{ textAlign: "left" }}>
+                        <p style={{ fontWeight: "bold", fontSize: "13px", color: "var(--cor-primaria)", margin: 0 }}>
+                          Código de entrada: {s.pin}
+                        </p>
+                        <p style={{ fontSize: "13px", color: "var(--texto-suave)", margin: "4px 0 0 0" }}>
+                          Aguardando entrada dos alunos
+                        </p>
                       </div>
-                    </>
+                      <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(s.pin); alert("Código copiado!"); }}
+                          style={buttonSecondary}
+                        >
+                          Copiar código
+                        </button>
+                        <button
+                          onClick={async () => { await startSession(s.id); navigate(`/professor/sessao/${s.id}`); }}
+                          style={buttonPrimary}
+                        >
+                          Iniciar
+                        </button>
+                      </div>
+                    </div>
                   )}
                   {s.status === "playing" && (
-                    <button
-                      onClick={() => navigate(`/professor/sessao/${s.id}`)}
-                      style={buttonPrimary}
-                    >
-                      Ver sessão ao vivo
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", width: "100%", justifyContent: "space-between" }}>
+                      <SessionTimer sessionId={s.id} />
+                      <button
+                        onClick={() => navigate(`/professor/sessao/${s.id}`)}
+                        style={buttonPrimary}
+                      >
+                        Ver sessão ao vivo
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -245,11 +246,11 @@ export default function ClassPageProfessor() {
       {historico.length > 0 && (
         <div style={card}>
           <h2>Histórico de Sessões</h2>
-
+ 
           {historico.map((s) => {
             const quiz = quizzes.find(q => q.id === s.quizId);
             const isExpanded = expandedSession === s.id;
-
+ 
             return (
               <div key={s.id} style={sessionCard}>
                 <button
@@ -273,7 +274,7 @@ export default function ClassPageProfessor() {
                     </p>
                   </div>
                 </button>
-
+ 
                 {isExpanded && s.acertosPorQuestao && (
                   <div style={{ marginTop: "12px" }}>
                     {s.acertosPorQuestao.map((q, i) => (
@@ -287,7 +288,7 @@ export default function ClassPageProfessor() {
                           </div>
                           <span style={{
                             fontSize: "13px", fontWeight: "bold",
-                            color: q.percentual >= 70 ? "#4CAF50" : q.percentual >= 40 ? "#ff9800" : "#f44336",
+                            color: "var(--cor-primaria)",
                             minWidth: "40px", textAlign: "right"
                           }}>
                             {q.percentual}%
@@ -302,11 +303,11 @@ export default function ClassPageProfessor() {
           })}
         </div>
       )}
-
+ 
       {/* Alunos matriculados */}
       <div style={card}>
         <h2>Alunos Matriculados</h2>
-
+ 
         {classData.status === "active" && (
           <div style={{ display: "flex", gap: "8px", marginBottom: "20px", justifyContent: "center" }}>
             <input
@@ -320,7 +321,7 @@ export default function ClassPageProfessor() {
             </button>
           </div>
         )}
-
+ 
         {enrollments.length === 0 ? (
           <p>Nenhum aluno cadastrado nesta turma ainda.</p>
         ) : (
@@ -334,11 +335,11 @@ export default function ClassPageProfessor() {
             </thead>
             <tbody>
               {enrollments.map(e => (
-                <tr key={e.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                <tr key={e.id} style={{ borderBottom: "1px solid var(--borda)" }}>
                   <td style={tdStyle}>{e.nome || "—"}</td>
                   <td style={tdStyle}>{e.email}</td>
                   <td style={tdStyle}>
-                    <span style={{ color: e.userId ? "#4CAF50" : "#aaa", fontSize: "12px" }}>
+                    <span style={{ color: e.userId ? "#32ae36" : "var(--cor-primaria)", fontSize: "12px" }}>
                       {e.userId ? "Cadastrado" : "Aguardando cadastro"}
                     </span>
                   </td>
@@ -347,7 +348,7 @@ export default function ClassPageProfessor() {
             </tbody>
           </table>
         )}
-
+ 
         {classData.status === "active" && (
           <button
             onClick={() => closeClass(classId).then(() =>
@@ -363,7 +364,7 @@ export default function ClassPageProfessor() {
   );
 }
 
-const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
+const container = { minHeight: "100vh", background: "transparent", padding: "30px" };
 const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
   maxWidth: "700px", margin: "0 auto 30px auto", padding: "20px",
@@ -376,26 +377,30 @@ const sessionCard = {
   padding: "15px", marginBottom: "15px", textAlign: "left"
 };
 const inputStyle = {
-  padding: "8px", borderRadius: "6px", border: "1px solid #ccc", fontSize: "14px", flex: 1
+  padding: "8px", borderRadius: "6px", border: "1px solid var(--borda)", fontSize: "14px", flex: 1
 };
 const buttonPrimary = {
   padding: "10px 15px", borderRadius: "8px", border: "none",
-  background: "#4CAF50", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "#32ae36", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };
 const buttonSecondary = {
-  padding: "8px 12px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
+  padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--borda)",
+  background: "var(--bg-card)", color: "#000000", cursor: "pointer"
 };
 const buttonDanger = {
   padding: "8px 12px", borderRadius: "8px", border: "none",
-  background: "#f44336", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "var(--cor-primaria)", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };
 const cardButton = {
   width: "100%", padding: "10px", marginBottom: "10px",
-  borderRadius: "8px", border: "1px solid #ccc", cursor: "pointer"
+  borderRadius: "8px", border: "1px solid var(--borda)", cursor: "pointer",
+  color: "var(--texto)", transition: "background 0.15s, border-color 0.15s"
 };
-const thStyle = { padding: "8px", fontSize: "12px", color: "var(--texto-muito-suave)", borderBottom: "2px solid #eee" };
-const tdStyle = { padding: "10px", fontSize: "14px", textAlign: "center" };
+const thStyle = {
+  padding: "8px", fontSize: "12px", color: "var(--texto-muito-suave)",
+  borderBottom: "2px solid var(--borda)"
+};
+const tdStyle = { padding: "10px", fontSize: "14px", textAlign: "center", color: "var(--texto)" };
 const historicoButton = {
   width: "100%", display: "flex", justifyContent: "space-between",
   alignItems: "center", background: "none", border: "none",
@@ -405,11 +410,11 @@ const percentualBadge = (pct) => ({
   display: "inline-block", padding: "4px 10px", borderRadius: "20px",
   fontSize: "13px", fontWeight: "bold",
   background: pct >= 70 ? "#e8f5e9" : pct >= 40 ? "#fff3e0" : "#ffebee",
-  color: pct >= 70 ? "#4CAF50" : pct >= 40 ? "#ff9800" : "#f44336",
+  color: pct >= 70 ? "#32ae36" : pct >= 40 ? "#ff9800" : "var(--cor-primaria)",
 });
 const questaoRow = {
   display: "flex", justifyContent: "space-between", alignItems: "center",
-  gap: "12px", padding: "8px 0", borderBottom: "1px solid #f0f0f0"
+  gap: "12px", padding: "8px 0", borderBottom: "1px solid var(--borda)"
 };
 const barraFundo = {
   width: "80px", height: "8px", background: "var(--borda)",
@@ -418,5 +423,11 @@ const barraFundo = {
 const barraPreenchida = (pct) => ({
   height: "100%", borderRadius: "4px",
   width: `${pct}%`,
-  background: pct >= 70 ? "#4CAF50" : pct >= 40 ? "#ff9800" : "#f44336",
+  background: pct >= 70 ? "#32ae36" : pct >= 40 ? "#ff9800" : "var(--cor-primaria)",
 });
+const timerText = {
+  fontSize: "18px", fontWeight: "bold",
+  color: "var(--cor-primaria)",
+  fontFamily: "'Fredoka One', sans-serif",
+  display: "inline-flex", alignItems: "center", gap: "5px"
+};

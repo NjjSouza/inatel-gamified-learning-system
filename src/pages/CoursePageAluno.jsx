@@ -7,14 +7,24 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
 import RankingTable from "../components/RankingTable";
+import TwemojiImg from "../components/TwemojiImg";
+
+const NIVEL_CODEPOINTS = {
+  "Pedra":    "1faa8",
+  "Bronze":   "1f949",
+  "Prata":    "1f948",
+  "Ouro":     "1f947",
+  "Platina":  "1f52e",
+  "Diamante": "1f48e",
+};
 
 function getNivel(xp) {
-  if (xp <= 200) return { label: "Pedra", emoji: "🪨" };
-  if (xp <= 400) return { label: "Bronze", emoji: "🥉" };
-  if (xp <= 600) return { label: "Prata", emoji: "🥈" };
-  if (xp <= 800) return { label: "Ouro", emoji: "🥇" };
-  if (xp <= 1000) return { label: "Platina", emoji: "🔮" };
-  return { label: "Diamante", emoji: "💎" };
+  if (xp <= 200) return { label: "Pedra" };
+  if (xp <= 400) return { label: "Bronze" };
+  if (xp <= 600) return { label: "Prata" };
+  if (xp <= 800) return { label: "Ouro" };
+  if (xp <= 1000) return { label: "Platina" };
+  return { label: "Diamante" };
 }
 
 export default function CoursePageAluno() {
@@ -113,7 +123,7 @@ export default function CoursePageAluno() {
 
       const userIds = todosEnrollmentsSnap.docs
         .map(d => d.data().userId)
-        .filter(Boolean); // ignora pré-matrículas sem userId
+        .filter(Boolean);
 
       if (userIds.length === 0) {
         setLoading(false);
@@ -146,7 +156,6 @@ export default function CoursePageAluno() {
         })
       );
 
-      // Ordena por XP decrescente
       rankingComNomes.sort((a, b) => b.xp - a.xp);
       setRanking(rankingComNomes);
       setLoading(false);
@@ -181,7 +190,11 @@ export default function CoursePageAluno() {
         ) : (
           <>
             <div style={nivelBadge}>
-              <span style={nivelEmoji}>{meuNivel.emoji}</span>
+              <TwemojiImg
+                codepoint={NIVEL_CODEPOINTS[meuNivel.label]}
+                size={36}
+                alt={meuNivel.label}
+              />
               <span style={nivelLabel}>{meuNivel.label}</span>
             </div>
 
@@ -227,7 +240,7 @@ export default function CoursePageAluno() {
   );
 }
 
-const container = { minHeight: "100vh", background: "var(--bg)", padding: "30px" };
+const container = { minHeight: "100vh", background: "transparent", padding: "30px" };
 const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
   maxWidth: "600px", margin: "0 auto 30px auto", padding: "20px",
@@ -242,22 +255,10 @@ const statBox = {
   background: "var(--bg)", borderRadius: "10px", padding: "20px 10px",
   display: "flex", flexDirection: "column", alignItems: "center", gap: "6px"
 };
-const statNumber = { fontSize: "28px", fontWeight: "bold", color: "#4CAF50" };
+const statNumber = { fontSize: "28px", fontWeight: "bold", color: "#32ae36" };
 const statLabel = { fontSize: "13px", color: "var(--texto-suave)" };
 const nivelBadge = {
   display: "flex", alignItems: "center", justifyContent: "center",
-  gap: "8px", marginBottom: "15px"
+  gap: "10px", marginBottom: "15px"
 };
-const nivelEmoji = { fontSize: "32px" };
 const nivelLabel = { fontSize: "20px", fontWeight: "bold", color: "var(--texto-suave)" };
-const tabela = { width: "100%", borderCollapse: "collapse", marginTop: "10px" };
-const thStyle = {
-  padding: "10px", borderBottom: "2px solid #eee",
-  fontSize: "13px", color: "var(--texto-muito-suave)", textAlign: "center"
-};
-const trStyle = { borderBottom: "1px solid #f0f0f0" };
-const tdStyle = { padding: "10px", textAlign: "center", fontSize: "14px" };
-const buttonVoltar = {
-  padding: "8px 16px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
-};

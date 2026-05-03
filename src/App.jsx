@@ -7,7 +7,6 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import CoursePageProfessor from "./pages/CoursePageProfessor";
 import CoursePageAluno from "./pages/CoursePageAluno";
 import JoinSession from "./pages/JoinSession";
-import CreateQuiz from "./pages/CreateQuiz";
 import EditQuiz from "./pages/EditQuiz";
 import Register from "./pages/Register";
 import SessionPlayer from "./pages/SessionPlayer";
@@ -49,10 +48,6 @@ function App() {
 
           <Route path="/aluno/sessao/:sessionId" element={
             <ProtectedRoute><SessionPlayer /></ProtectedRoute>
-          } />
-
-          <Route path="/criar-quiz/:courseId" element={
-            <ProtectedRoute><CreateQuiz /></ProtectedRoute>
           } />
 
           <Route path="/professor/quiz/:quizId" element={

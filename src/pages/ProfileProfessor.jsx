@@ -55,13 +55,6 @@ export default function ProfileProfessor() {
           {user?.email}
         </p>
 
-        <DotLottieReact
-          src="https://lottie.host/be439f2a-2a11-4425-8b5e-b82a42989f9f/8EbJ2FnIF7.lottie"
-          autoplay
-          loop
-          style={{ width: 200, height: 200, margin: "0 auto" }}
-        />
-
         <button onClick={handleLogout} style={{ ...buttonDanger, marginTop: "20px" }}>
           Sair
         </button>
@@ -70,6 +63,13 @@ export default function ProfileProfessor() {
       {/* Disciplinas */}
       <div style={card}>
         <h2>Minhas Disciplinas</h2>
+
+        <DotLottieReact
+          src="https://lottie.host/be439f2a-2a11-4425-8b5e-b82a42989f9f/8EbJ2FnIF7.lottie"
+          autoplay
+          loop
+          style={{ width: 200, height: 200, margin: "0 auto" }}
+        />
 
         {loading ? (
           <p>Carregando...</p>
@@ -113,7 +113,7 @@ const card = {
 };
 const avatarCircle = {
   width: "80px", height: "80px", borderRadius: "50%",
-  background: "#4CAF50", color: "#fff", fontSize: "36px",
+  background: "var(--cor-primaria)", color: "#fff", fontSize: "36px",
   fontWeight: "bold", display: "flex", alignItems: "center",
   justifyContent: "center", margin: "0 auto"
 };
@@ -122,7 +122,7 @@ const discCard = {
   padding: "15px", marginBottom: "12px", textAlign: "left"
 };
 const badgeAtiva = {
-  background: "#e8f5e9", color: "#4CAF50", fontWeight: "bold",
+  background: "#e8f5e9", color: "#32ae36", fontWeight: "bold",
   fontSize: "12px", padding: "3px 8px", borderRadius: "12px"
 };
 const badgeEncerrada = {
@@ -131,5 +131,5 @@ const badgeEncerrada = {
 };
 const buttonDanger = {
   padding: "8px 20px", borderRadius: "8px", border: "none",
-  background: "#f44336", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "var(--cor-primaria)", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };

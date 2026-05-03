@@ -6,14 +6,15 @@ import { useCourses } from "../hooks/useCourses";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import TwemojiImg from "../components/TwemojiImg";
 
 function getNivel(xp) {
-  if (xp <= 200) return { label: "Pedra", emoji: "🪨" };
-  if (xp <= 400) return { label: "Bronze", emoji: "🥉" };
-  if (xp <= 600) return { label: "Prata", emoji: "🥈" };
-  if (xp <= 800) return { label: "Ouro", emoji: "🥇" };
-  if (xp <= 1000) return { label: "Platina", emoji: "🔮" };
-  return { label: "Diamante", emoji: "💎" };
+  if (xp <= 200) return { label: "Pedra" };
+  if (xp <= 400) return { label: "Bronze" };
+  if (xp <= 600) return { label: "Prata" };
+  if (xp <= 800) return { label: "Ouro" };
+  if (xp <= 1000) return { label: "Platina" };
+  return { label: "Diamante" };
 }
 
 export default function ProfileAluno() {
@@ -95,13 +96,6 @@ export default function ProfileAluno() {
           {user?.email}
         </p>
 
-        <DotLottieReact
-          src="https://lottie.host/be439f2a-2a11-4425-8b5e-b82a42989f9f/8EbJ2FnIF7.lottie"
-          autoplay
-          loop
-          style={{ width: 200, height: 200, margin: "0 auto" }}
-        />
-
         <button onClick={handleLogout} style={{ ...buttonDanger, marginTop: "20px" }}>
           Sair
         </button>
@@ -110,6 +104,13 @@ export default function ProfileAluno() {
       {/* Disciplinas */}
       <div style={card}>
         <h2>Minhas Disciplinas</h2>
+
+        <DotLottieReact
+          src="https://lottie.host/be439f2a-2a11-4425-8b5e-b82a42989f9f/8EbJ2FnIF7.lottie"
+          autoplay
+          loop
+          style={{ width: 200, height: 200, margin: "0 auto" }}
+        />
 
         {loading ? (
           <p>Carregando...</p>
@@ -150,7 +151,7 @@ const card = {
 };
 const avatarCircle = {
   width: "80px", height: "80px", borderRadius: "50%",
-  background: "#4CAF50", color: "#fff", fontSize: "36px",
+  background: "var(--cor-primaria)", color: "#fff", fontSize: "36px",
   fontWeight: "bold", display: "flex", alignItems: "center",
   justifyContent: "center", margin: "0 auto"
 };
@@ -163,12 +164,12 @@ const turmaRow = {
   alignItems: "center", marginTop: "10px"
 };
 const xpBadge = {
-  background: "#e8f5e9", color: "#4CAF50", fontWeight: "bold",
+  background: "#e8f5e9", color: "#32ae36", fontWeight: "bold",
   fontSize: "12px", padding: "3px 8px", borderRadius: "12px"
 };
 const buttonDanger = {
   padding: "8px 20px", borderRadius: "8px", border: "none",
-  background: "#f44336", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "var(--cor-primaria)", color: "#fff", cursor: "pointer", fontWeight: "bold"
 };
 const buttonVoltar = {
   padding: "8px 16px", borderRadius: "8px",

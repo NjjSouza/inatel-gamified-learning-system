@@ -7,6 +7,7 @@ import { useQuizzes } from "../hooks/useQuizzes";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
+import Spinner from "../components/Spinner";
 
 function SessionTimer({ questionIndex }) {
   const [seconds, setSeconds] = useState(0);
@@ -83,9 +84,7 @@ export default function SessionLivePage() {
     if (session?.status === "finished") navigate(-1);
   }, [session?.status]);
 
-  if (!session) return (
-    <div style={fullCenter}><div style={spinnerStyle} /></div>
-  );
+  if (!session) return <Spinner />;
 
   const currentIndex = session.currentQuestionIndex ?? 0;
   const totalPlayers = players.length;
@@ -163,11 +162,6 @@ const fullCenter = {
   minHeight: "100vh", display: "flex",
   justifyContent: "center", alignItems: "center"
 };
-const spinnerStyle = {
-  width: "36px", height: "36px", borderRadius: "50%",
-  border: "4px solid #e0e0e0", borderTop: "4px solid #4CAF50",
-  animation: "spin 0.8s linear infinite", background: "var(--cor-primaria)"
-};
 const topBar = {
   background: "var(--bg-card)", padding: "16px 24px",
   display: "flex", justifyContent: "space-between",
@@ -188,7 +182,7 @@ const responseText = { fontSize: "14px", color: "#555", marginBottom: "8px", tex
 const progressBarFundo = { width: "100%", height: "10px", background: "#e0e0e0", borderRadius: "5px", overflow: "hidden", background: "var(--borda)"};
 const progressBarPreenchida = (pct) => ({
   height: "100%", borderRadius: "5px", width: `${pct}%`,
-  background: "var(--cor-primaria)", transition: "width 0.4s ease"
+  background: "#32ae36", transition: "width 0.4s ease"
 });
 const placarCard = {
   maxWidth: "700px", margin: "20px auto", padding: "20px",
@@ -207,9 +201,9 @@ const footer = {
 };
 const buttonPrimary = {
   padding: "12px 24px", borderRadius: "8px", border: "none",
-  background: "#4CAF50", color: "#fff", fontSize: "15px", fontWeight: "bold"
+  background: "#32ae36", color: "#fff", fontSize: "15px", fontWeight: "bold"
 };
 const buttonDanger = {
   padding: "12px 24px", borderRadius: "8px", border: "none",
-  background: "#f44336", color: "#fff", fontSize: "15px", fontWeight: "bold", cursor: "pointer"
+  background: "var(--cor-primaria)", color: "#fff", fontSize: "15px", fontWeight: "bold", cursor: "pointer"
 };
