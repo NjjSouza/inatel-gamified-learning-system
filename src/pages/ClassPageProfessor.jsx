@@ -31,7 +31,8 @@ export default function ClassPageProfessor() {
  
   const { getEnrollments, enrollByEmail, closeClass } = useClasses();
   const { createSession, startSession, finishSession,
-          nextQuestion, listenPlayers, listenSessionsByClass } = useSessions();
+          nextQuestion, listenPlayers, listenSessionsByClass,
+          getOpenAnswersForSession } = useSessions();
   const { getQuizzes, getQuestions } = useQuizzes();
  
   const [classData, setClassData] = useState(null);
@@ -44,7 +45,9 @@ export default function ClassPageProfessor() {
   const [enrollments, setEnrollments] = useState([]);
   const [enrollEmail, setEnrollEmail] = useState("");
   const [expandedSession, setExpandedSession] = useState(null);
- 
+  const [quizTemAberta, setQuizTemAberta] = useState({});
+  const [pendentePorSessao, setPendentePorSessao] = useState({});
+
   const sessoesAtivas = sessions.filter(s => s.status !== "finished");
   const historico = sessions.filter(s => s.status === "finished");
   const historicoOrdenado = [...historico].sort(
@@ -73,11 +76,14 @@ export default function ClassPageProfessor() {
   useEffect(() => {
     const fetchCounts = async () => {
       const counts = {};
+      const temAberta = {};
       for (const quiz of quizzes) {
         const qs = await getQuestions(quiz.id);
         counts[quiz.id] = qs.length;
+        temAberta[quiz.id] = qs.some(q => q.tipo === "aberta");
       }
       setQuestionsCount(counts);
+      setQuizTemAberta(temAberta);
     };
     if (quizzes.length) fetchCounts();
   }, [quizzes]);
@@ -107,7 +113,30 @@ export default function ClassPageProfessor() {
       });
     setRespondidosPorSessao(novoRespondidos);
   }, [sessions, playersBySession]);
- 
+
+  // Verifica se ainda há respostas abertas pendentes em cada sessão do histórico
+  useEffect(() => {
+    const sessoesConcluidas = sessions.filter(s => s.status === "finished");
+    if (sessoesConcluidas.length === 0) return;
+
+    const verificar = async () => {
+      const novasPendencias = {};
+      for (const s of sessoesConcluidas) {
+        if (!quizTemAberta[s.quizId]) {
+          novasPendencias[s.id] = false;
+          continue;
+        }
+        const respostas = await getOpenAnswersForSession(s.id);
+        const temPendente = respostas.some(
+          r => r.isCorrect === null || r.isCorrect === undefined
+        );
+        novasPendencias[s.id] = temPendente;
+      }
+      setPendentePorSessao(novasPendencias);
+    };
+    verificar();
+  }, [sessions, quizTemAberta]);
+
   const handleCreateSession = async () => {
     if (!selectedQuiz) return alert("Selecione um quiz!");
     const session = await createSession(selectedQuiz.id, courseId, classId);
@@ -159,9 +188,13 @@ export default function ClassPageProfessor() {
                   ...cardButton,
                   background: selectedQuiz?.id === q.id ? "#e8f5e9" : "var(--bg)",
                   borderColor: selectedQuiz?.id === q.id ? "#32ae36" : "var(--borda)",
+                  color: selectedQuiz?.id === q.id ? "#1a1a1a" : "var(--texto)",
                 }}
               >
-                {q.nome}
+                <span>{q.nome}</span>
+                {quizTemAberta[q.id] && (
+                  <span style={badgeAberta}>Contém questões abertas</span>
+                )}
               </button>
             ))
           )}
@@ -253,7 +286,9 @@ export default function ClassPageProfessor() {
             const presencaPct = presentes != null && matriculados > 0
               ? Math.round((presentes / matriculados) * 100)
               : null;
- 
+            const temAberta = quizTemAberta[s.quizId];
+            const temPendente = pendentePorSessao[s.id];
+
             return (
               <div key={s.id} style={sessionCard}>
                 <button
@@ -282,7 +317,22 @@ export default function ClassPageProfessor() {
                   </div>
                 </button>
 
-                {/* Presença — sempre visível quando o dado existe */}
+                {/* Botão de correção de questões abertas */}
+                {temPendente && (
+                  <div style={corrigirRow}>
+                    <span style={corrigirHint}>
+                      Este quiz contém questões abertas
+                    </span>
+                    <button
+                      onClick={() => navigate(`/professor/sessao/${s.id}/corrigir`)}
+                      style={buttonCorrigir}
+                    >
+                      Corrigir respostas
+                    </button>
+                  </div>
+                )}
+
+                {/* Presença */}
                 {presentes != null && (
                   <div style={presencaRow}>
                     <div style={presencaItem}>
@@ -417,7 +467,7 @@ const buttonPrimary = {
 };
 const buttonSecondary = {
   padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--borda)",
-  background: "var(--bg-card)", color: "#000000", cursor: "pointer"
+  background: "#fff", color: "#000000", cursor: "pointer"
 };
 const buttonDanger = {
   padding: "8px 12px", borderRadius: "8px", border: "none",
@@ -426,7 +476,8 @@ const buttonDanger = {
 const cardButton = {
   width: "100%", padding: "10px", marginBottom: "10px",
   borderRadius: "8px", border: "1px solid var(--borda)", cursor: "pointer",
-  color: "var(--texto)", transition: "background 0.15s, border-color 0.15s"
+  color: "var(--texto)", transition: "background 0.15s, border-color 0.15s",
+  display: "flex", justifyContent: "space-between", alignItems: "center"
 };
 const thStyle = {
   padding: "8px", fontSize: "12px", color: "var(--texto-muito-suave)",
@@ -453,13 +504,11 @@ const barraFundo = {
   borderRadius: "4px", overflow: "hidden"
 };
 const barraPreenchida = (pct) => ({
-  height: "100%", borderRadius: "4px",
-  width: `${pct}%`,
+  height: "100%", borderRadius: "4px", width: `${pct}%`,
   background: pct >= 70 ? "#32ae36" : pct >= 40 ? "#ff9800" : "var(--cor-primaria)",
 });
 const timerText = {
-  fontSize: "18px", fontWeight: "bold",
-  color: "var(--cor-primaria)",
+  fontSize: "18px", fontWeight: "bold", color: "var(--cor-primaria)",
   fontFamily: "'Fredoka One', sans-serif",
   display: "inline-flex", alignItems: "center", gap: "5px"
 };
@@ -468,10 +517,7 @@ const presencaRow = {
   marginTop: "10px", padding: "10px 0 4px",
   borderTop: "1px solid var(--borda)"
 };
-const presencaItem = {
-  display: "flex", flexDirection: "column", alignItems: "center",
-  minWidth: "56px"
-};
+const presencaItem = { display: "flex", flexDirection: "column", alignItems: "center", minWidth: "56px" };
 const presencaNumero = {
   fontSize: "22px", fontWeight: "bold", color: "var(--texto)",
   fontFamily: "'Fredoka One', sans-serif", lineHeight: 1
@@ -491,3 +537,19 @@ const presencaPctLabel = (pct) => ({
   fontSize: "12px", fontWeight: "bold",
   color: pct >= 70 ? "#32ae36" : pct >= 40 ? "#ff9800" : "var(--cor-primaria)",
 });
+const badgeAberta = {
+  fontSize: "11px", padding: "2px 8px", borderRadius: "10px",
+  background: "#fff3e0", color: "#e65100", fontWeight: "bold"
+};
+const corrigirRow = {
+  display: "flex", justifyContent: "space-between", alignItems: "center",
+  marginTop: "10px", padding: "10px 12px",
+  background: "#fff8f0", borderRadius: "8px",
+  border: "1px solid #ffe0b2", gap: "10px", flexWrap: "wrap"
+};
+const corrigirHint = { fontSize: "13px", color: "#e65100" };
+const buttonCorrigir = {
+  padding: "7px 14px", borderRadius: "8px", border: "none",
+  background: "#e65100", color: "#fff",
+  fontWeight: "bold", fontSize: "13px", cursor: "pointer", flexShrink: 0
+};

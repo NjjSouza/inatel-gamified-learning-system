@@ -9,6 +9,7 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import LottieOverlay from "../components/LottieOverlay";
 import RankingTable from "../components/RankingTable";
 import Spinner from "../components/Spinner";
+import TwemojiImg from "../components/TwemojiImg";
 
 function shuffleArray(array) {
   const arr = [...array];
@@ -23,7 +24,7 @@ export default function SessionPlayer() {
   const { user } = useAuth();
   const { sessionId } = useParams();
   const { getQuestions } = useQuizzes();
-  const { submitAnswer } = useSessions();
+  const { submitAnswer, submitOpenAnswer } = useSessions();
 
   const [session, setSession] = useState(null);
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
@@ -34,7 +35,10 @@ export default function SessionPlayer() {
   const [showFinishedOverlay, setShowFinishedOverlay] = useState(false);
   const [finalPlayers, setFinalPlayers] = useState([]);
 
-  // Escuta sessão em tempo real
+  // Para questões abertas
+  const [respostaAberta, setRespostaAberta] = useState("");
+  const [enviandoAberta, setEnviandoAberta] = useState(false);
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "sessions", sessionId), (docSnap) => {
       if (docSnap.exists()) setSession({ id: docSnap.id, ...docSnap.data() });
@@ -42,7 +46,6 @@ export default function SessionPlayer() {
     return () => unsub();
   }, [sessionId]);
 
-  // Carrega e embaralha perguntas quando quiz é identificado
   useEffect(() => {
     if (!session?.quizId) return;
     const fetch = async () => {
@@ -52,18 +55,19 @@ export default function SessionPlayer() {
     fetch();
   }, [session?.quizId]);
 
-  // Embaralha alternativas a cada nova pergunta
   useEffect(() => {
     const current = shuffledQuestions[session?.currentQuestionIndex];
     if (!current) return;
-    const altsComIndice = current.alternativas.map((alt, i) => ({
-      texto: alt, originalIndex: i,
-    }));
-    setShuffledAlts(shuffleArray(altsComIndice));
+    if (current.tipo !== "aberta") {
+      const altsComIndice = current.alternativas.map((alt, i) => ({
+        texto: alt, originalIndex: i,
+      }));
+      setShuffledAlts(shuffleArray(altsComIndice));
+    }
     setAnswered(false);
+    setRespostaAberta("");
   }, [session?.currentQuestionIndex, shuffledQuestions]);
 
-  // Busca o registro do jogador nesta sessão
   useEffect(() => {
     if (!user) return;
     const fetchPlayer = async () => {
@@ -78,7 +82,6 @@ export default function SessionPlayer() {
     fetchPlayer();
   }, [sessionId, user]);
 
-  // Exibe overlay de vitória ao encerrar (apenas uma vez por sessão)
   useEffect(() => {
     if (session?.status !== "finished") return;
     const key = `overlay_shown_${sessionId}`;
@@ -88,7 +91,6 @@ export default function SessionPlayer() {
     }
   }, [session?.status]);
 
-  // Busca ranking final quando sessão encerra
   useEffect(() => {
     if (session?.status !== "finished") return;
     const fetchPlayers = async () => {
@@ -102,17 +104,14 @@ export default function SessionPlayer() {
     fetchPlayers();
   }, [session?.status]);
 
-  // Tela de carregamento inicial
   if (!session) return <Spinner />;
 
-  // Tela de espera antes do professor iniciar
   if (session.status === "waiting") return (
     <div style={fullCenter}>
       <div style={waitingCard}>
         <DotLottieReact
           src="https://lottie.host/bd15ee68-de80-4a7f-87a4-7d16d992f416/oUWbhJDnjs.lottie"
-          autoplay
-          loop
+          autoplay loop
           style={{ width: 200, height: 200, margin: "0 auto" }}
         />
         <p style={waitingText}>Aguardando o professor iniciar a sessão...</p>
@@ -121,15 +120,12 @@ export default function SessionPlayer() {
     </div>
   );
 
-  // Tela de encerramento com overlay de vitória e ranking final
   if (session.status === "finished") return (
     <div style={fullCenter}>
       {showFinishedOverlay && (
         <LottieOverlay
           src="https://lottie.host/63e7884d-4599-4223-89b0-446d20a28c9c/2hTKas29T2.lottie"
-          loop={false}
-          dark
-          duration={3000}
+          loop={false} dark duration={3000}
           onFinish={() => setShowFinishedOverlay(false)}
         />
       )}
@@ -137,32 +133,100 @@ export default function SessionPlayer() {
         <div style={{ ...finishedCard, maxWidth: "500px" }}>
           <h2 style={finishedTitle}>Sessão encerrada!</h2>
           <p style={{ ...finishedSubtext, marginBottom: "8px" }}>
-            Seus pontos foram registrados! 🎉
+            Seus pontos foram registrados!
           </p>
           <p style={{ ...finishedSubtext, marginBottom: "20px", color: "#aaa", fontSize: "13px" }}>
-            Você já pode fechar esta página ou voltar ao início.
+            XPs de questões abertas são contabilizados após correção do professor.
           </p>
-          <RankingTable
-            players={finalPlayers}
-            highlightUserId={playerId}
-          />
+          <RankingTable players={finalPlayers} highlightUserId={playerId} />
         </div>
       )}
     </div>
   );
 
   const current = shuffledQuestions[session.currentQuestionIndex];
-  if (!current || shuffledAlts.length === 0) return <Spinner />;
+  if (!current) return <Spinner />;
+
+  const isAberta = current.tipo === "aberta";
+  const xpDaQuestao = current.xp ?? 10;
+
+  // Questão aberta 
+  if (isAberta) {
+    return (
+      <div className="fundo-quiz" style={{ minHeight: "100vh" }}>
+        <div style={container}>
+          {showAnswerOverlay && (
+            <LottieOverlay
+              src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
+              loop duration={3100}
+              onFinish={() => setShowAnswerOverlay(false)}
+            />
+          )}
+          <div style={card}>
+            <p style={questionCounter}>
+              Pergunta {session.currentQuestionIndex + 1} de {shuffledQuestions.length}
+            </p>
+            <span style={xpTag}> <TwemojiImg codepoint="26a1" size={14} alt="xp" /> {xpDaQuestao} XP (aguardar correção)</span>
+
+            <h3 style={questionText}>{current.pergunta}</h3>
+
+            {answered ? (
+              <div style={answeredOpenBox}>
+                <p style={{ margin: 0, color: "#32ae36", fontWeight: "bold", fontSize: "15px" }}>
+                  Resposta enviada!
+                </p>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  placeholder="Digite sua resposta aqui..."
+                  value={respostaAberta}
+                  onChange={(e) => setRespostaAberta(e.target.value)}
+                  style={textareaStyle}
+                  rows={5}
+                  disabled={enviandoAberta}
+                />
+                <button
+                  onClick={async () => {
+                    if (!respostaAberta.trim()) return alert("Digite sua resposta antes de enviar.");
+                    if (!playerId) return;
+                    setEnviandoAberta(true);
+                    try {
+                      await submitOpenAnswer(
+                        playerId, sessionId, current.id,
+                        session.currentQuestionIndex,
+                        respostaAberta.trim(),
+                        user.uid, session.classId
+                      );
+                      setAnswered(true);
+                      setShowAnswerOverlay(true);
+                    } finally {
+                      setEnviandoAberta(false);
+                    }
+                  }}
+                  disabled={enviandoAberta}
+                  style={{ ...answerButton, marginTop: "12px", opacity: enviandoAberta ? 0.7 : 1 }}
+                >
+                  {enviandoAberta ? "Enviando..." : "Enviar resposta"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Questão de múltipla escolha
+  if (shuffledAlts.length === 0) return <Spinner />;
 
   return (
     <div className="fundo-quiz" style={{ minHeight: "100vh" }}>
       <div style={container}>
-        {/* Overlay de comemoração ao responder — aparece uma vez, sem loop */}
         {showAnswerOverlay && (
           <LottieOverlay
             src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
-            loop
-            duration={3100}
+            loop duration={3100}
             onFinish={() => setShowAnswerOverlay(false)}
           />
         )}
@@ -171,6 +235,7 @@ export default function SessionPlayer() {
           <p style={questionCounter}>
             Pergunta {session.currentQuestionIndex + 1} de {shuffledQuestions.length}
           </p>
+          <span style={xpTag}> <TwemojiImg codepoint="26a1" size={14} alt="xp" /> {xpDaQuestao} XP</span>
 
           <h3 style={questionText}>{current.pergunta}</h3>
 
@@ -185,7 +250,8 @@ export default function SessionPlayer() {
                   await submitAnswer(
                     playerId, sessionId, current.id,
                     session.currentQuestionIndex, alt.originalIndex,
-                    isCorrect, user.uid, session.classId
+                    isCorrect, user.uid, session.classId,
+                    xpDaQuestao
                   );
                   setAnswered(true);
                   setShowAnswerOverlay(true);
@@ -202,7 +268,7 @@ export default function SessionPlayer() {
           </div>
 
           {answered && !showAnswerOverlay && (
-            <p style={answeredFeedback}>Resposta registrada! 🎉</p>
+            <p style={answeredFeedback}>Resposta registrada!</p>
           )}
         </div>
       </div>
@@ -220,9 +286,7 @@ const waitingCard = {
   borderRadius: "16px", boxShadow: "0 0 20px var(--sombra)",
   maxWidth: "400px", width: "90%"
 };
-const waitingText = {
-  fontSize: "18px", fontWeight: "bold", color: "var(--texto)", margin: "16px 0 8px"
-};
+const waitingText = { fontSize: "18px", fontWeight: "bold", color: "var(--texto)", margin: "16px 0 8px" };
 const waitingSubtext = { fontSize: "14px", color: "var(--texto-muito-suave)", margin: 0 };
 const finishedCard = {
   textAlign: "center", padding: "40px", background: "var(--bg-card)",
@@ -240,15 +304,29 @@ const card = {
   background: "var(--bg-card)", borderRadius: "10px",
   boxShadow: "0 0 10px var(--sombra)", textAlign: "center"
 };
-const questionCounter = { fontSize: "13px", color: "var(--texto-muito-suave)", margin: "0 0 12px" };
+const questionCounter = { fontSize: "13px", color: "var(--texto-muito-suave)", margin: "0 0 4px" };
+const xpTag = {
+  display: "inline-block", marginBottom: "12px",
+  fontSize: "12px", fontWeight: "bold",
+  background: "#e8f5e9", color: "#32ae36",
+  padding: "2px 10px", borderRadius: "10px"
+};
 const questionText = { fontSize: "20px", marginBottom: "24px", color: "var(--texto)" };
 const answersContainer = { display: "flex", flexDirection: "column", gap: "10px" };
 const answerButton = {
   padding: "14px", borderRadius: "8px", border: "none",
   background: "#32ae36", color: "#fff",
-  fontWeight: "bold", fontSize: "15px", transition: "opacity 0.2s"
+  fontWeight: "bold", fontSize: "15px", transition: "opacity 0.2s", cursor: "pointer"
 };
-const answeredFeedback = {
-  marginTop: "16px", fontSize: "15px",
-  color: "#32ae36", fontWeight: "bold"
+const answeredFeedback = { marginTop: "16px", fontSize: "15px", color: "#32ae36", fontWeight: "bold" };
+const textareaStyle = {
+  width: "100%", padding: "12px", borderRadius: "8px",
+  border: "2px solid var(--borda)", fontSize: "15px",
+  boxSizing: "border-box", resize: "vertical", fontFamily: "inherit",
+  background: "var(--bg)", color: "var(--texto)", outline: "none",
+  transition: "border-color 0.2s",
+};
+const answeredOpenBox = {
+  background: "#e8f5e9", borderRadius: "10px",
+  padding: "20px", marginTop: "8px"
 };

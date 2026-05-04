@@ -18,7 +18,6 @@ export function useSessions() {
 
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Salva o semestre da turma junto na sessão para exibir no histórico
     const classSnap = await getDoc(doc(db, "classes", classId));
     const classeSemestre = classSnap.exists() ? classSnap.data().semestre : "";
 
@@ -40,9 +39,7 @@ export function useSessions() {
   const getSessionByPin = async (pin) => {
     const q = query(collection(db, "sessions"), where("pin", "==", pin));
     const snapshot = await getDocs(q);
-
     if (snapshot.empty) return null;
-
     const docSnap = snapshot.docs[0];
     return { id: docSnap.id, ...docSnap.data() };
   };
@@ -72,7 +69,6 @@ export function useSessions() {
       collection(db, "session_players"),
       where("sessionId", "==", sessionId)
     );
-
     return onSnapshot(q, (snapshot) => {
       const players = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       callback(players);
@@ -100,7 +96,6 @@ export function useSessions() {
     });
   };
 
-  // Limpeza lazy: ao carregar sessões da turma, deleta silenciosamente qualquer sessão finalizada cujo expireAt já passou
   const listenSessionsByClass = (classId, callback) => {
     const q = query(collection(db, "sessions"), where("classId", "==", classId));
     return onSnapshot(q, async (snapshot) => {
@@ -112,8 +107,7 @@ export function useSessions() {
         const expireAt = data.expireAt?.toDate ? data.expireAt.toDate() : null;
 
         if (expireAt && expireAt < agora) {
-          // Sessão expirada - deleta silenciosamente e não inclui na lista
-          deleteDoc(d.ref).catch(() => {}); // fire-and-forget, sem bloquear a UI
+          deleteDoc(d.ref).catch(() => {});
         } else {
           sessions.push({ id: d.id, ...data });
         }
@@ -131,21 +125,19 @@ export function useSessions() {
   };
 
   const finishSession = async (sessionId, quizId) => {
-    // Respostas da sessão
     const answersSnap = await getDocs(query(
       collection(db, "session_answers"),
       where("sessionId", "==", sessionId)
     ));
-    const respostas = answersSnap.docs.map(d => d.data());
+    // Inclui apenas respostas de questões fechadas (múltipla escolha) para o percentual
+    const respostas = answersSnap.docs.map(d => d.data()).filter(r => r.tipo !== "aberta");
 
-    // Jogadores presentes
     const playersSnap = await getDocs(query(
       collection(db, "session_players"),
       where("sessionId", "==", sessionId)
     ));
     const totalPresentes = playersSnap.size;
 
-    // Total de alunos matriculados e ativos na turma
     const sessionSnap = await getDoc(doc(db, "sessions", sessionId));
     const classId = sessionSnap.data()?.classId;
 
@@ -158,12 +150,10 @@ export function useSessions() {
       totalMatriculados = enrollSnap.size;
     }
 
-    // Percentual geral de acerto
     const total = respostas.length;
     const acertos = respostas.filter(r => r.isCorrect).length;
     const percentualGeral = total > 0 ? Math.round((acertos / total) * 100) : 0;
 
-    // Acerto por questão
     const porQuestao = {};
     respostas.forEach(r => {
       if (!porQuestao[r.questionId]) porQuestao[r.questionId] = { acertos: 0, total: 0 };
@@ -183,7 +173,6 @@ export function useSessions() {
       total: dados.total,
     }));
 
-    // ExpireAt: usado pela limpeza lazy no cliente
     const expireAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
 
     await updateDoc(doc(db, "sessions", sessionId), {
@@ -207,22 +196,26 @@ export function useSessions() {
     });
   };
 
-  const submitAnswer = async (playerId, sessionId, questionId, questionIndex, answerIndex, isCorrect, userId, classId) => {
+  // Resposta de múltipla escolha - XP concedido na hora
+  const submitAnswer = async (playerId, sessionId, questionId, questionIndex, answerIndex, isCorrect, userId, classId, xpAmount = 10) => {
+    const xpGanho = isCorrect ? xpAmount : 0;
+
     await addDoc(collection(db, "session_answers"), {
       sessionId, questionId, userId, answerIndex, isCorrect,
-      xp: isCorrect ? 10 : 0,
+      tipo: "multipla",
+      xp: xpGanho,
       answeredAt: new Date(),
     });
 
     const playerRef = doc(db, "session_players", playerId);
     await updateDoc(playerRef, {
       [`answers.${questionIndex}`]: answerIndex,
-      score: isCorrect ? increment(10) : increment(0),
+      score: isCorrect ? increment(xpGanho) : increment(0),
     });
 
     if (isCorrect && userId && classId) {
       await addDoc(collection(db, "xp"), {
-        userId, classId, amount: 10,
+        userId, classId, amount: xpGanho,
         reason: "correct_answer", sessionId, questionId,
         createdAt: new Date(),
       });
@@ -243,6 +236,54 @@ export function useSessions() {
     return isCorrect;
   };
 
+  // Resposta de questão aberta - salva o texto, sem XP imediato
+  const submitOpenAnswer = async (playerId, sessionId, questionId, questionIndex, respostaTexto, userId, classId) => {
+    await addDoc(collection(db, "session_answers"), {
+      sessionId, questionId, userId, classId,
+      respostaTexto,
+      tipo: "aberta",
+      isCorrect: null, // correção pendente
+      xp: 0,
+      answeredAt: new Date(),
+    });
+
+    // Marca a questão como "respondida" no placar do jogador (sem score)
+    const playerRef = doc(db, "session_players", playerId);
+    await updateDoc(playerRef, {
+      [`answers.${questionIndex}`]: "aberta_enviada",
+    });
+  };
+
+  // Correção manual de questão aberta pelo professor
+  const gradeOpenAnswer = async (answerId, isCorrect, userId, classId, sessionId, questionId, xpAmount = 10) => {
+    const answerRef = doc(db, "session_answers", answerId);
+    const xpGanho = isCorrect ? xpAmount : 0;
+
+    await updateDoc(answerRef, {
+      isCorrect,
+      xp: xpGanho,
+      gradedAt: new Date(),
+    });
+
+    if (isCorrect && userId && classId) {
+      await addDoc(collection(db, "xp"), {
+        userId, classId, amount: xpGanho,
+        reason: "open_answer_graded", sessionId, questionId,
+        createdAt: new Date(),
+      });
+    }
+  };
+
+  // Busca respostas abertas de uma sessão para o professor corrigir
+  const getOpenAnswersForSession = async (sessionId) => {
+    const snap = await getDocs(query(
+      collection(db, "session_answers"),
+      where("sessionId", "==", sessionId),
+      where("tipo", "==", "aberta")
+    ));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  };
+
   return {
     createSession,
     getSessionByPin,
@@ -256,5 +297,8 @@ export function useSessions() {
     finishSession,
     nextQuestion,
     submitAnswer,
+    submitOpenAnswer,
+    gradeOpenAnswer,
+    getOpenAnswersForSession,
   };
 }

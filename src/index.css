@@ -7,7 +7,7 @@
   --cor-primaria-claro: #c56363;
   --cor-primaria-borda: rgba(198, 77, 77, 0.3);
 
-  --bg: #f5f5f5;
+  --bg: #fbfbfb;
   --bg-card: #ffffff;
   --texto: #333333;
   --texto-suave: #666666;
@@ -28,7 +28,7 @@
 
     --bg: #1a1a1a;
     --bg-card: #242424;
-    --texto: #e8e8e8;
+    --texto: #cbcbcb;
     --texto-suave: #aaaaaa;
     --texto-muito-suave: #666666;
     --borda: #3a3a3a;
@@ -49,7 +49,7 @@ body {
   font-size: 16px;
   color: var(--texto);
   background-color: var(--bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='10' y='40' font-size='30' fill='rgba(198,77,77,0.06)'%3E%3F%3C/text%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='10' y='40' font-size='30' fill='rgba(198,77,77,0.12)'%3E%3F%3C/text%3E%3C/svg%3E");
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -92,7 +92,7 @@ input, select, textarea {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Fundo-quiz - Global */
+/* Fundo - Global */
 .fundo-quiz {
   min-height: 100vh;
   width: 100%;

@@ -15,6 +15,7 @@ import ProfileAluno from "./pages/ProfileAluno";
 import ProfileProfessor from "./pages/ProfileProfessor";
 import Navbar from "./components/Navbar";
 import SessionLivePage from "./pages/SessionLivePage";
+import CorrectOpenAnswers from "./pages/CorrectOpenAnswers";
 
 function App() {
   return (
@@ -69,6 +70,12 @@ function App() {
           <Route path="/professor/sessao/:sessionId" element={
             <ProtectedRoute>
               <SessionLivePage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/professor/sessao/:sessionId/corrigir" element={
+            <ProtectedRoute>
+              <CorrectOpenAnswers />
             </ProtectedRoute>
           } />
 
