@@ -47,6 +47,9 @@ export default function ClassPageProfessor() {
  
   const sessoesAtivas = sessions.filter(s => s.status !== "finished");
   const historico = sessions.filter(s => s.status === "finished");
+  const historicoOrdenado = [...historico].sort(
+    (a, b) => (b.finishedAt?.toDate?.() ?? 0) - (a.finishedAt?.toDate?.() ?? 0)
+  );
  
   useEffect(() => {
     const fetch = async () => {
@@ -154,12 +157,8 @@ export default function ClassPageProfessor() {
                 onClick={() => setSelectedQuiz(prev => prev?.id === q.id ? null : q)}
                 style={{
                   ...cardButton,
-                  background: selectedQuiz?.id === q.id
-                    ? "#e8f5e9"
-                    : "var(--bg)",
-                  borderColor: selectedQuiz?.id === q.id
-                    ? "#32ae36"
-                    : "var(--borda)",
+                  background: selectedQuiz?.id === q.id ? "#e8f5e9" : "var(--bg)",
+                  borderColor: selectedQuiz?.id === q.id ? "#32ae36" : "var(--borda)",
                 }}
               >
                 {q.nome}
@@ -246,10 +245,14 @@ export default function ClassPageProfessor() {
       {historico.length > 0 && (
         <div style={card}>
           <h2>Histórico de Sessões</h2>
- 
-          {historico.map((s) => {
+          {historicoOrdenado.map((s) => {
             const quiz = quizzes.find(q => q.id === s.quizId);
             const isExpanded = expandedSession === s.id;
+            const presentes = s.totalPresentes ?? null;
+            const matriculados = s.totalMatriculados ?? null;
+            const presencaPct = presentes != null && matriculados > 0
+              ? Math.round((presentes / matriculados) * 100)
+              : null;
  
             return (
               <div key={s.id} style={sessionCard}>
@@ -261,8 +264,12 @@ export default function ClassPageProfessor() {
                     <strong>{quiz?.nome || "Quiz"}</strong>
                     <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--texto-suave)" }}>
                       {s.finishedAt?.toDate
-                        ? s.finishedAt.toDate().toLocaleDateString("pt-BR")
+                        ? s.finishedAt.toDate().toLocaleString("pt-BR", {
+                          day: "2-digit", month: "2-digit", year: "numeric",
+                          hour: "2-digit", minute: "2-digit",
+                        })
                         : "—"}
+                      {s.classeSemestre ? ` - ${s.classeSemestre}` : ""}
                     </p>
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -274,9 +281,34 @@ export default function ClassPageProfessor() {
                     </p>
                   </div>
                 </button>
+
+                {/* Presença — sempre visível quando o dado existe */}
+                {presentes != null && (
+                  <div style={presencaRow}>
+                    <div style={presencaItem}>
+                      <span style={presencaNumero}>{presentes}</span>
+                      <span style={presencaLabel}>
+                        {matriculados > 0 ? `de ${matriculados} presentes` : "presentes"}
+                      </span>
+                    </div>
+                    {presencaPct != null && (
+                      <div style={presencaBarraWrap}>
+                        <div style={presencaBarraFundo}>
+                          <div style={presencaBarraPreenchida(presencaPct)} />
+                        </div>
+                        <span style={presencaPctLabel(presencaPct)}>
+                          {presencaPct}% de presença
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
  
                 {isExpanded && s.acertosPorQuestao && (
                   <div style={{ marginTop: "12px" }}>
+                    <p style={{ fontSize: "12px", color: "var(--texto-muito-suave)", marginBottom: "8px", textAlign: "left" }}>
+                      Acerto por questão (entre os presentes):
+                    </p>
                     {s.acertosPorQuestao.map((q, i) => (
                       <div key={q.questionId} style={questaoRow}>
                         <span style={{ fontSize: "13px", textAlign: "left", flex: 1 }}>
@@ -288,7 +320,7 @@ export default function ClassPageProfessor() {
                           </div>
                           <span style={{
                             fontSize: "13px", fontWeight: "bold",
-                            color: "var(--cor-primaria)",
+                            color: q.percentual >= 70 ? "#32ae36" : q.percentual >= 40 ? "#ff9800" : "var(--cor-primaria)",
                             minWidth: "40px", textAlign: "right"
                           }}>
                             {q.percentual}%
@@ -431,3 +463,31 @@ const timerText = {
   fontFamily: "'Fredoka One', sans-serif",
   display: "inline-flex", alignItems: "center", gap: "5px"
 };
+const presencaRow = {
+  display: "flex", alignItems: "center", gap: "16px",
+  marginTop: "10px", padding: "10px 0 4px",
+  borderTop: "1px solid var(--borda)"
+};
+const presencaItem = {
+  display: "flex", flexDirection: "column", alignItems: "center",
+  minWidth: "56px"
+};
+const presencaNumero = {
+  fontSize: "22px", fontWeight: "bold", color: "var(--texto)",
+  fontFamily: "'Fredoka One', sans-serif", lineHeight: 1
+};
+const presencaLabel = { fontSize: "11px", color: "var(--texto-muito-suave)", marginTop: "2px" };
+const presencaBarraWrap = { flex: 1, display: "flex", flexDirection: "column", gap: "4px" };
+const presencaBarraFundo = {
+  width: "100%", height: "8px", background: "var(--borda)",
+  borderRadius: "4px", overflow: "hidden"
+};
+const presencaBarraPreenchida = (pct) => ({
+  height: "100%", borderRadius: "4px", width: `${pct}%`,
+  background: pct >= 70 ? "#32ae36" : pct >= 40 ? "#ff9800" : "var(--cor-primaria)",
+  transition: "width 0.4s ease"
+});
+const presencaPctLabel = (pct) => ({
+  fontSize: "12px", fontWeight: "bold",
+  color: pct >= 70 ? "#32ae36" : pct >= 40 ? "#ff9800" : "var(--cor-primaria)",
+});

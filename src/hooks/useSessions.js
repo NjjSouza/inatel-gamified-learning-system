@@ -1,11 +1,16 @@
 import { db } from "../services/firebase";
-import { collection, doc, addDoc, updateDoc, query, where, onSnapshot, getDoc, getDocs, setDoc, increment } from "firebase/firestore";
+import {
+  collection, doc, addDoc, updateDoc, query, where,
+  onSnapshot, getDoc, getDocs, setDoc, increment, deleteDoc
+} from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 import { useQuizzes } from "./useQuizzes";
 
+const SESSION_TTL_DAYS = 1;
+
 export function useSessions() {
   const { user } = useAuth();
-  const { getQuestions } = useQuizzes(); 
+  const { getQuestions } = useQuizzes();
 
   const createSession = async (quizId, courseId, classId) => {
     if (!user) throw new Error("Usuário não autenticado");
@@ -13,11 +18,16 @@ export function useSessions() {
 
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // Salva o semestre da turma junto na sessão para exibir no histórico
+    const classSnap = await getDoc(doc(db, "classes", classId));
+    const classeSemestre = classSnap.exists() ? classSnap.data().semestre : "";
+
     const docRef = await addDoc(collection(db, "sessions"), {
       professorId: user.uid,
       quizId,
       courseId,
       classId,
+      classeSemestre,
       pin,
       status: "waiting",
       currentQuestionIndex: 0,
@@ -28,21 +38,13 @@ export function useSessions() {
   };
 
   const getSessionByPin = async (pin) => {
-    const q = query(
-      collection(db, "sessions"),
-      where("pin", "==", pin)
-    );
-
+    const q = query(collection(db, "sessions"), where("pin", "==", pin));
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) return null;
 
     const docSnap = snapshot.docs[0];
-
-    return {
-      id: docSnap.id,
-      ...docSnap.data(),
-    };
+    return { id: docSnap.id, ...docSnap.data() };
   };
 
   const joinSession = async (sessionId) => {
@@ -72,68 +74,51 @@ export function useSessions() {
     );
 
     return onSnapshot(q, (snapshot) => {
-      const players = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
+      const players = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       callback(players);
     });
   };
 
   const getSessions = async () => {
     if (!user) return [];
-
-    const q = query(
-      collection(db, "sessions"),
-      where("professorId", "==", user.uid)
-    );
-
+    const q = query(collection(db, "sessions"), where("professorId", "==", user.uid));
     const snapshot = await getDocs(q);
-
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   };
 
   const getSessionsByCourse = async (courseId) => {
-    const q = query(
-      collection(db, "sessions"),
-      where("courseId", "==", courseId)
-    );
-
+    const q = query(collection(db, "sessions"), where("courseId", "==", courseId));
     const snapshot = await getDocs(q);
-
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   };
 
   const listenSessionsByCourse = (courseId, callback) => {
-    const q = query(
-      collection(db, "sessions"),
-      where("courseId", "==", courseId)
-    );
-
+    const q = query(collection(db, "sessions"), where("courseId", "==", courseId));
     return onSnapshot(q, (snapshot) => {
-      const sessions = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
+      const sessions = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       callback(sessions);
     });
   };
 
+  // Limpeza lazy: ao carregar sessões da turma, deleta silenciosamente qualquer sessão finalizada cujo expireAt já passou
   const listenSessionsByClass = (classId, callback) => {
-    const q = query(
-      collection(db, "sessions"),
-      where("classId", "==", classId)
-    );
-    return onSnapshot(q, (snapshot) => {
-      const sessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const q = query(collection(db, "sessions"), where("classId", "==", classId));
+    return onSnapshot(q, async (snapshot) => {
+      const agora = new Date();
+      const sessions = [];
+
+      for (const d of snapshot.docs) {
+        const data = d.data();
+        const expireAt = data.expireAt?.toDate ? data.expireAt.toDate() : null;
+
+        if (expireAt && expireAt < agora) {
+          // Sessão expirada - deleta silenciosamente e não inclui na lista
+          deleteDoc(d.ref).catch(() => {}); // fire-and-forget, sem bloquear a UI
+        } else {
+          sessions.push({ id: d.id, ...data });
+        }
+      }
+
       callback(sessions);
     });
   };
@@ -146,33 +131,49 @@ export function useSessions() {
   };
 
   const finishSession = async (sessionId, quizId) => {
+    // Respostas da sessão
     const answersSnap = await getDocs(query(
       collection(db, "session_answers"),
       where("sessionId", "==", sessionId)
     ));
-
     const respostas = answersSnap.docs.map(d => d.data());
 
+    // Jogadores presentes
+    const playersSnap = await getDocs(query(
+      collection(db, "session_players"),
+      where("sessionId", "==", sessionId)
+    ));
+    const totalPresentes = playersSnap.size;
+
+    // Total de alunos matriculados e ativos na turma
+    const sessionSnap = await getDoc(doc(db, "sessions", sessionId));
+    const classId = sessionSnap.data()?.classId;
+
+    let totalMatriculados = 0;
+    if (classId) {
+      const enrollSnap = await getDocs(query(
+        collection(db, "enrollments"),
+        where("classId", "==", classId),
+      ));
+      totalMatriculados = enrollSnap.size;
+    }
+
+    // Percentual geral de acerto
     const total = respostas.length;
     const acertos = respostas.filter(r => r.isCorrect).length;
     const percentualGeral = total > 0 ? Math.round((acertos / total) * 100) : 0;
 
+    // Acerto por questão
     const porQuestao = {};
     respostas.forEach(r => {
-      if (!porQuestao[r.questionId]) {
-        porQuestao[r.questionId] = { acertos: 0, total: 0 };
-      }
+      if (!porQuestao[r.questionId]) porQuestao[r.questionId] = { acertos: 0, total: 0 };
       porQuestao[r.questionId].total += 1;
       if (r.isCorrect) porQuestao[r.questionId].acertos += 1;
     });
 
-    const questoesSnap = await getDocs(
-      collection(db, "quizzes", quizId, "questions")
-    );
+    const questoesSnap = await getDocs(collection(db, "quizzes", quizId, "questions"));
     const questoesMap = {};
-    questoesSnap.docs.forEach(d => {
-      questoesMap[d.id] = d.data().pergunta;
-    });
+    questoesSnap.docs.forEach(d => { questoesMap[d.id] = d.data().pergunta; });
 
     const acertosPorQuestao = Object.entries(porQuestao).map(([qId, dados]) => ({
       questionId: qId,
@@ -182,11 +183,17 @@ export function useSessions() {
       total: dados.total,
     }));
 
+    // ExpireAt: usado pela limpeza lazy no cliente
+    const expireAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+
     await updateDoc(doc(db, "sessions", sessionId), {
       status: "finished",
       percentualGeral,
       acertosPorQuestao,
+      totalPresentes,
+      totalMatriculados,
       finishedAt: new Date(),
+      expireAt,
     });
   };
 
@@ -195,65 +202,46 @@ export function useSessions() {
       console.warn("Última pergunta atingida");
       return;
     }
-
     await updateDoc(doc(db, "sessions", sessionId), {
       currentQuestionIndex: currentIndex + 1,
     });
   };
 
   const submitAnswer = async (playerId, sessionId, questionId, questionIndex, answerIndex, isCorrect, userId, classId) => {
-  await addDoc(collection(db, "session_answers"), {
-    sessionId,
-    questionId,
-    userId,
-    answerIndex,
-    isCorrect,
-    xp: isCorrect ? 10 : 0,
-    answeredAt: new Date(),
-  });
-
-  const playerRef = doc(db, "session_players", playerId);
-  await updateDoc(playerRef, {
-    [`answers.${questionIndex}`]: answerIndex,
-    score: isCorrect ? increment(10) : increment(0),
-  });
-
-  if (isCorrect && userId && classId) {
-    await addDoc(collection(db, "xp"), {
-      userId,
-      classId,
-      amount: 10,
-      reason: "correct_answer",
-      sessionId,
-      questionId,
-      createdAt: new Date(),
+    await addDoc(collection(db, "session_answers"), {
+      sessionId, questionId, userId, answerIndex, isCorrect,
+      xp: isCorrect ? 10 : 0,
+      answeredAt: new Date(),
     });
 
-    // estrutura de moedas (valor a definir)
-    await addDoc(collection(db, "coins"), {
-      userId,
-      classId,
-      amount: 0,
-      reason: "correct_answer",
-      sessionId,
-      questionId,
-      createdAt: new Date(),
+    const playerRef = doc(db, "session_players", playerId);
+    await updateDoc(playerRef, {
+      [`answers.${questionIndex}`]: answerIndex,
+      score: isCorrect ? increment(10) : increment(0),
     });
 
-    await setDoc(
-      doc(db, "coin_balance", `${userId}_${classId}`),
-      {
-        userId,
-        classId,
-        balance: increment(0),
-        updatedAt: new Date(),
-      },
-      { merge: true }
-    );
-  }
+    if (isCorrect && userId && classId) {
+      await addDoc(collection(db, "xp"), {
+        userId, classId, amount: 10,
+        reason: "correct_answer", sessionId, questionId,
+        createdAt: new Date(),
+      });
 
-  return isCorrect;
-};
+      await addDoc(collection(db, "coins"), {
+        userId, classId, amount: 0,
+        reason: "correct_answer", sessionId, questionId,
+        createdAt: new Date(),
+      });
+
+      await setDoc(
+        doc(db, "coin_balance", `${userId}_${classId}`),
+        { userId, classId, balance: increment(0), updatedAt: new Date() },
+        { merge: true }
+      );
+    }
+
+    return isCorrect;
+  };
 
   return {
     createSession,
