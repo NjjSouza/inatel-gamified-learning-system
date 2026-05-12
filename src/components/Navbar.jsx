@@ -21,16 +21,16 @@ export default function Navbar() {
 
   return (
     <div style={navbar}>
-      <img 
-        src="/logo.png" 
-        alt="Inatelligent" 
-        style={{ height: "32px", objectFit: "contain" }} 
+      <img
+        src="/logo.png"
+        alt="Inatelligent"
+        style={{ height: "32px", objectFit: "contain" }}
       />
       <button
         onClick={handlePerfilClick}
         style={{
           ...buttonPerfil,
-          background: estaNoPerfil ? "var(--cor-primaria-claro)" : "var(--cor-primaria)",
+          background: estaNoPerfil ? "var(--cor-primaria-hover)" : "var(--cor-primaria)",
         }}
         title={estaNoPerfil ? "Voltar" : "Meu perfil"}
       >
@@ -42,14 +42,17 @@ export default function Navbar() {
 
 const navbar = {
   position: "fixed", top: 0, left: 0, right: 0,
-  height: "56px", background: "var(--bg-card)",
-  boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+  height: "56px",
+  background: "var(--bg-card)",
+  borderBottom: "1px solid var(--borda)",
+  boxShadow: "var(--sombra-card)",
   display: "flex", justifyContent: "space-between",
-  alignItems: "center", padding: "0 24px", zIndex: 100
+  alignItems: "center", padding: "0 24px", zIndex: 100,
 };
-const logo = { fontWeight: "bold", fontSize: "18px", color: "#32ae36" };
+
 const buttonPerfil = {
   width: "38px", height: "38px", borderRadius: "50%",
   border: "none", color: "#fff",
-  fontSize: "16px", fontWeight: "bold", cursor: "pointer"
+  fontSize: "16px", fontWeight: "bold", cursor: "pointer",
+  transition: "background 0.2s",
 };

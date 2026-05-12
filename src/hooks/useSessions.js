@@ -6,7 +6,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useQuizzes } from "./useQuizzes";
 
-const SESSION_TTL_DAYS = 1;
+const SESSION_TTL_DAYS = 30;
 
 export function useSessions() {
   const { user } = useAuth();

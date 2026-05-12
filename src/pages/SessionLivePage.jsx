@@ -4,7 +4,6 @@ import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
 import Spinner from "../components/Spinner";
@@ -32,11 +31,11 @@ export default function SessionLivePage() {
   const { finishSession, nextQuestion } = useSessions();
   const { getQuizzes, getQuestions } = useQuizzes();
 
-  const [session, setSession] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [quizNome, setQuizNome] = useState("");
+  const [session, setSession]           = useState(null);
+  const [players, setPlayers]           = useState([]);
+  const [quizNome, setQuizNome]         = useState("");
   const [totalQuestions, setTotalQuestions] = useState(0);
-  const [respondidos, setRespondidos] = useState(0);
+  const [respondidos, setRespondidos]   = useState(0);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "sessions", sessionId), (snap) => {
@@ -58,13 +57,9 @@ export default function SessionLivePage() {
   }, [session?.quizId]);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "session_players"),
-      where("sessionId", "==", sessionId)
-    );
+    const q = query(collection(db, "session_players"), where("sessionId", "==", sessionId));
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setPlayers(data);
+      setPlayers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
   }, [sessionId]);
@@ -73,9 +68,7 @@ export default function SessionLivePage() {
     if (!session) return;
     const currentIndex = session.currentQuestionIndex ?? 0;
     const jaResponderam = players.filter(
-      p => p.answers && Object.prototype.hasOwnProperty.call(
-        p.answers, String(currentIndex)
-      )
+      p => p.answers && Object.prototype.hasOwnProperty.call(p.answers, String(currentIndex))
     ).length;
     setRespondidos(jaResponderam);
   }, [players, session?.currentQuestionIndex]);
@@ -86,13 +79,10 @@ export default function SessionLivePage() {
 
   if (!session) return <Spinner />;
 
-  const currentIndex = session.currentQuestionIndex ?? 0;
-  const totalPlayers = players.length;
+  const currentIndex   = session.currentQuestionIndex ?? 0;
+  const totalPlayers   = players.length;
   const isLastQuestion = currentIndex >= totalQuestions - 1;
-
-  const handleNext = async () => {
-    await nextQuestion(sessionId, currentIndex, totalQuestions);
-  };
+  const pctRespondidos = totalPlayers > 0 ? (respondidos / totalPlayers) * 100 : 0;
 
   const handleFinish = async () => {
     if (!confirm("Deseja encerrar a sessão? Esta ação não pode ser desfeita.")) return;
@@ -109,17 +99,19 @@ export default function SessionLivePage() {
         </div>
         <div style={progressInfo}>
           <SessionTimer questionIndex={currentIndex} />
-          <span style={progressText}>Pergunta {currentIndex + 1} de {totalQuestions}</span>
+          <span style={progressText}>
+            Pergunta {currentIndex + 1} de {totalQuestions}
+          </span>
         </div>
       </div>
 
-      {/* Progresso */}
+      {/* Barra de respostas */}
       <div style={responseBar}>
-        <p style={responseText}>{respondidos} de {totalPlayers} alunos responderam</p>
-        <div style={progressBarFundo}>
-          <div style={progressBarPreenchida(
-            totalPlayers > 0 ? (respondidos / totalPlayers) * 100 : 0
-          )} />
+        <p style={responseText}>
+          {respondidos} de {totalPlayers} alunos responderam
+        </p>
+        <div style={barraFundo}>
+          <div style={barraPreenchida(pctRespondidos)} />
         </div>
       </div>
 
@@ -135,17 +127,13 @@ export default function SessionLivePage() {
 
       {/* Rodapé */}
       <div style={footer}>
-        <button onClick={handleFinish} style={buttonDanger}>
+        <button onClick={handleFinish} style={buttonPerigo}>
           Encerrar sessão
         </button>
         <button
-          onClick={handleNext}
+          onClick={() => nextQuestion(sessionId, currentIndex, totalQuestions)}
           disabled={isLastQuestion}
-          style={{
-            ...buttonPrimary,
-            opacity: isLastQuestion ? 0.5 : 1,
-            cursor: isLastQuestion ? "default" : "pointer",
-          }}
+          style={{ ...buttonPrimary, opacity: isLastQuestion ? 0.5 : 1, cursor: isLastQuestion ? "default" : "pointer" }}
         >
           Próxima pergunta
         </button>
@@ -155,55 +143,51 @@ export default function SessionLivePage() {
 }
 
 const container = {
-  minHeight: "100vh", background: "var(--bg)",
-  display: "flex", flexDirection: "column", paddingBottom: "80px"
-};
-const fullCenter = {
-  minHeight: "100vh", display: "flex",
-  justifyContent: "center", alignItems: "center"
+  minHeight: "100vh", background: "transparent",
+  display: "flex", flexDirection: "column", paddingBottom: "80px",
 };
 const topBar = {
   background: "var(--bg-card)", padding: "16px 24px",
-  display: "flex", justifyContent: "space-between",
-  alignItems: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.08)"
+  display: "flex", justifyContent: "space-between", alignItems: "center",
+  boxShadow: "0 1px 4px var(--sombra)", borderBottom: "1px solid var(--borda)",
 };
-const quizLabel = { fontSize: "18px", fontWeight: "bold", color: "#222", margin: "0 0 4px", color: "var(--texto)"};
-const codigoLabel = { fontSize: "14px", color: "var(--texto-suave)", margin: 0 };
+const quizLabel    = { fontSize: "18px", fontWeight: "bold", color: "var(--texto)", margin: "0 0 4px" };
+const codigoLabel  = { fontSize: "14px", color: "var(--texto-suave)", margin: 0 };
 const progressInfo = { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" };
 const timerText = {
-  fontSize: "22px", fontWeight: "bold",
-  color: "var(--cor-primaria)",
+  fontSize: "22px", fontWeight: "bold", color: "var(--cor-primaria)",
   fontFamily: "'Fredoka One', sans-serif",
-  display: "flex", alignItems: "center", gap: "6px"
+  display: "flex", alignItems: "center", gap: "6px",
 };
 const progressText = { fontSize: "13px", color: "var(--texto-muito-suave)" };
-const responseBar = { maxWidth: "700px", margin: "20px auto 0", padding: "0 20px", width: "100%" };
-const responseText = { fontSize: "14px", color: "#555", marginBottom: "8px", textAlign: "center" };
-const progressBarFundo = { width: "100%", height: "10px", background: "#e0e0e0", borderRadius: "5px", overflow: "hidden", background: "var(--borda)"};
-const progressBarPreenchida = (pct) => ({
+const responseBar  = { maxWidth: "700px", margin: "20px auto 0", padding: "0 20px", width: "100%" };
+const responseText = { fontSize: "14px", color: "var(--texto-suave)", marginBottom: "8px", textAlign: "center" };
+const barraFundo   = {
+  width: "100%", height: "10px", background: "var(--borda)",
+  borderRadius: "5px", overflow: "hidden",
+};
+const barraPreenchida = (pct) => ({
   height: "100%", borderRadius: "5px", width: `${pct}%`,
-  background: "#32ae36", transition: "width 0.4s ease"
+  background: "var(--cor-primaria)", transition: "width 0.4s ease",
 });
 const placarCard = {
   maxWidth: "700px", margin: "20px auto", padding: "20px",
   background: "var(--bg-card)", borderRadius: "12px",
-  boxShadow: "0 0 10px rgba(0,0,0,0.08)", width: "calc(100% - 40px)"
+  boxShadow: "var(--sombra-card)", border: "1px solid var(--borda)",
+  width: "calc(100% - 40px)",
 };
-const tabela = { width: "100%", borderCollapse: "collapse" };
-const thStyle = { padding: "10px", fontSize: "12px", color: "var(--texto-muito-suave)", borderBottom: "2px solid #eee", textAlign: "center" };
-const trStyle = { borderBottom: "1px solid #f0f0f0" };
-const tdStyle = { padding: "12px", fontSize: "15px", textAlign: "center" };
 const footer = {
   position: "fixed", bottom: 0, left: 0, right: 0,
   background: "var(--bg-card)", padding: "12px 24px",
-  display: "flex", justifyContent: "space-between",
-  alignItems: "center", boxShadow: "0 -1px 8px rgba(0,0,0,0.08)"
+  display: "flex", justifyContent: "space-between", alignItems: "center",
+  boxShadow: "0 -1px 8px var(--sombra)", borderTop: "1px solid var(--borda)",
 };
 const buttonPrimary = {
   padding: "12px 24px", borderRadius: "8px", border: "none",
-  background: "#32ae36", color: "#fff", fontSize: "15px", fontWeight: "bold"
+  background: "var(--cor-primaria)", color: "#fff", fontSize: "15px", fontWeight: "bold",
 };
-const buttonDanger = {
+const buttonPerigo = {
   padding: "12px 24px", borderRadius: "8px", border: "none",
-  background: "var(--cor-primaria)", color: "#fff", fontSize: "15px", fontWeight: "bold", cursor: "pointer"
+  background: "var(--cor-perigo)", color: "#fff",
+  fontSize: "15px", fontWeight: "bold", cursor: "pointer",
 };

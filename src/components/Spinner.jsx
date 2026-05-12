@@ -11,14 +11,14 @@ const wrapper = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  padding: "40px"
+  padding: "40px",
 };
 
 const circle = {
   width: "36px",
   height: "36px",
   borderRadius: "50%",
-  border: "4px solid #e0e0e0",
-  borderTop: "4px solid #4CAF50",
+  border: "4px solid var(--borda)",
+  borderTop: "4px solid var(--cor-primaria)",
   animation: "spin 0.8s linear infinite",
 };

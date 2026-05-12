@@ -5,7 +5,7 @@ import { useQuizzes } from "../hooks/useQuizzes";
 import { useNavigate } from "react-router-dom";
 
 function DashboardProfessor() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { createCourse, getCourses } = useCourses();
   const { createQuiz, getQuizzes, deleteQuiz } = useQuizzes();
   const navigate = useNavigate();
@@ -15,20 +15,10 @@ function DashboardProfessor() {
   const [nomeQuiz, setNomeQuiz] = useState("");
   const [quizzes, setQuizzes] = useState([]);
 
-  const fetchCourses = async () => {
-    const data = await getCourses();
-    setCourses(data);
-  };
+  const fetchCourses = async () => { setCourses(await getCourses()); };
+  const fetchQuizzes = async () => { setQuizzes(await getQuizzes()); };
 
-  const fetchQuizzes = async () => {
-    const data = await getQuizzes();
-    setQuizzes(data);
-  };
-
-  useEffect(() => {
-    fetchCourses();
-    fetchQuizzes();
-  }, []);
+  useEffect(() => { fetchCourses(); fetchQuizzes(); }, []);
 
   const handleCreateCourse = async () => {
     if (!nomeCurso.trim()) return;
@@ -36,9 +26,7 @@ function DashboardProfessor() {
       await createCourse(nomeCurso.trim());
       setNomeCurso("");
       await fetchCourses();
-    } catch (erro) {
-      alert("Erro: " + erro.message);
-    }
+    } catch (e) { alert("Erro: " + e.message); }
   };
 
   const handleCreateQuiz = async () => {
@@ -48,9 +36,7 @@ function DashboardProfessor() {
       setNomeQuiz("");
       await fetchQuizzes();
       navigate(`/professor/quiz/${quiz.id}`);
-    } catch (erro) {
-      alert("Erro: " + erro.message);
-    }
+    } catch (e) { alert("Erro: " + e.message); }
   };
 
   const handleDeleteQuiz = async (quizId) => {
@@ -58,44 +44,32 @@ function DashboardProfessor() {
     try {
       await deleteQuiz(quizId);
       await fetchQuizzes();
-    } catch (erro) {
-      alert("Erro ao excluir: " + erro.message);
-    }
+    } catch (e) { alert("Erro ao excluir: " + e.message); }
   };
 
   return (
     <div style={container}>
       <div style={header}>
         <h1>Área do Professor</h1>
-        <p>Bem-vindo, {user?.nome || "Usuário"}</p>
+        <p style={{ color: "var(--texto-suave)" }}>Bem-vindo, {user?.nome || "Usuário"}</p>
       </div>
 
       {/* Disciplinas */}
       <div style={card}>
         <h2>Minhas Disciplinas</h2>
-
-        <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px" }}>
+        <div style={inputRow}>
           <input
-            type="text"
-            placeholder="Nome da disciplina"
-            value={nomeCurso}
-            onChange={(e) => setNomeCurso(e.target.value)}
-            style={{ ...inputStyle, flex: 1 }}
+            type="text" placeholder="Nome da disciplina"
+            value={nomeCurso} onChange={(e) => setNomeCurso(e.target.value)}
+            style={inputStyle}
           />
-          <button onClick={handleCreateCourse} style={buttonPrimary}>
-            Criar
-          </button>
+          <button onClick={handleCreateCourse} style={buttonPrimary}>Criar</button>
         </div>
-
         {courses.length === 0 ? (
-          <p>Nenhuma disciplina criada</p>
+          <p style={{ color: "var(--texto-suave)" }}>Nenhuma disciplina criada</p>
         ) : (
           courses.map((course) => (
-            <button
-              key={course.id}
-              onClick={() => navigate(`/professor/curso/${course.id}`)}
-              style={cardButton}
-            >
+            <button key={course.id} onClick={() => navigate(`/professor/curso/${course.id}`)} style={cardButton}>
               {course.nome}
             </button>
           ))
@@ -105,37 +79,25 @@ function DashboardProfessor() {
       {/* Quizzes */}
       <div style={card}>
         <h2>Meus Quizzes</h2>
-
-        <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px" }}>
+        <div style={inputRow}>
           <input
-            type="text"
-            placeholder="Nome do quiz"
-            value={nomeQuiz}
-            onChange={(e) => setNomeQuiz(e.target.value)}
-            style={{ ...inputStyle, flex: 1 }}
+            type="text" placeholder="Nome do quiz"
+            value={nomeQuiz} onChange={(e) => setNomeQuiz(e.target.value)}
+            style={inputStyle}
           />
-          <button onClick={handleCreateQuiz} style={buttonPrimary}>
-            Criar
-          </button>
+          <button onClick={handleCreateQuiz} style={buttonPrimary}>Criar</button>
         </div>
-
         {quizzes.length === 0 ? (
-          <p>Nenhum quiz criado</p>
+          <p style={{ color: "var(--texto-suave)" }}>Nenhum quiz criado</p>
         ) : (
           quizzes.map((q) => (
             <div key={q.id} style={quizCard}>
-              <span>{q.nome}</span>
+              <span style={{ color: "var(--texto)", fontWeight: "600" }}>{q.nome}</span>
               <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={() => navigate(`/professor/quiz/${q.id}`)}
-                  style={buttonPrimary}
-                >
+                <button onClick={() => navigate(`/professor/quiz/${q.id}`)} style={buttonPrimary}>
                   Editar
                 </button>
-                <button
-                  onClick={() => handleDeleteQuiz(q.id)}
-                  style={buttonDanger}
-                >
+                <button onClick={() => handleDeleteQuiz(q.id)} style={buttonPerigo}>
                   Excluir
                 </button>
               </div>
@@ -150,35 +112,40 @@ function DashboardProfessor() {
 const container = { minHeight: "100vh", background: "transparent", padding: "30px" };
 const header = { textAlign: "center", marginBottom: "30px" };
 const card = {
-  maxWidth: "700px", margin: "0 auto 30px auto", padding: "20px",
-  background: "var(--bg-card)", borderRadius: "10px",
-  boxShadow: "0 0 10px rgba(0,0,0,0.1)", textAlign: "center"
+  maxWidth: "700px", margin: "0 auto 30px auto", padding: "24px",
+  background: "var(--bg-card)", borderRadius: "12px",
+  boxShadow: "var(--sombra-card)", border: "1px solid var(--borda)",
+  textAlign: "center",
+};
+const inputRow = {
+  display: "flex", gap: "10px", justifyContent: "center", marginBottom: "20px",
 };
 const inputStyle = {
-  padding: "10px", borderRadius: "6px",
-  border: "1px solid #ccc", width: "100%", boxSizing: "border-box"
+  padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--borda)",
+  background: "var(--bg-input)", color: "var(--texto)",
+  fontSize: "14px", flex: 1, boxSizing: "border-box",
 };
 const buttonPrimary = {
-  padding: "10px 15px", borderRadius: "8px", border: "none",
-  background: "#32ae36", color: "white", cursor: "pointer", fontWeight: "bold"
+  padding: "10px 16px", borderRadius: "8px", border: "none",
+  background: "var(--cor-primaria)", color: "#fff",
+  cursor: "pointer", fontWeight: "bold", whiteSpace: "nowrap",
 };
-const buttonLogout = {
-  marginTop: "10px", padding: "8px 12px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer", fontWeight: "bold"
-};
-const buttonDanger = {
-  padding: "8px 12px", borderRadius: "8px", border: "none",
-  background: "var(--cor-primaria)", color: "#fff", cursor: "pointer", fontWeight: "bold"
+const buttonPerigo = {
+  padding: "10px 16px", borderRadius: "8px", border: "none",
+  background: "var(--cor-perigo)", color: "#fff",
+  cursor: "pointer", fontWeight: "bold",
 };
 const cardButton = {
-  width: "100%", padding: "10px", marginBottom: "10px",
-  borderRadius: "8px", border: "1px solid #ccc",
-  background: "#f9f9f9", cursor: "pointer"
+  width: "100%", padding: "12px 16px", marginBottom: "10px",
+  borderRadius: "8px", border: "1px solid var(--borda)",
+  background: "var(--bg-input)", color: "var(--texto)",
+  cursor: "pointer", textAlign: "left", fontWeight: "600",
 };
 const quizCard = {
   display: "flex", justifyContent: "space-between", alignItems: "center",
-  padding: "12px 15px", marginBottom: "10px",
-  border: "1px solid #ccc", borderRadius: "8px"
+  padding: "12px 16px", marginBottom: "10px",
+  border: "1px solid var(--borda)", borderRadius: "8px",
+  background: "var(--bg-input)",
 };
 
 export default DashboardProfessor;
