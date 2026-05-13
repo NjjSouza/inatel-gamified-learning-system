@@ -311,7 +311,7 @@ const SIDEBAR_WIDTH = "260px";
 const sidebar = {
   position: "fixed",
   top: "56px", // altura da Navbar
-  right: 0,
+  left: 0,
   bottom: 0,
   width: SIDEBAR_WIDTH,
   background: "var(--bg-card)",

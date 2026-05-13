@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { db } from "../services/firebase";
@@ -8,20 +8,100 @@ import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
 import Spinner from "../components/Spinner";
 
-function SessionTimer({ questionIndex }) {
-  const [seconds, setSeconds] = useState(0);
+// Tempo total por questão (segundos)
+const TEMPO_QUESTAO   = 40;
+// Quantos segundos antes do fim aparece o toast de desfazer
+const AVISO_ANTECEDENCIA = 5;
+
+function SessionTimer({ questionIndex, onAutoAdvance, isLastQuestion }) {
+  const [seconds, setSeconds]     = useState(TEMPO_QUESTAO);
+  const [piscando, setPiscando]   = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  // Ref para cancelar o avanço automático
+  const canceladoRef = useRef(false);
+  const toastTimerRef = useRef(null);
+  const autoAdvanceRef = useRef(null);
+
+  // Reseta tudo quando a questão muda
   useEffect(() => {
-    setSeconds(0);
-    const interval = setInterval(() => setSeconds(s => s + 1), 1000);
-    return () => clearInterval(interval);
+    canceladoRef.current = false;
+    setSeconds(TEMPO_QUESTAO);
+    setPiscando(false);
+    setToastVisible(false);
+    clearTimeout(toastTimerRef.current);
+    clearTimeout(autoAdvanceRef.current);
+
+    const interval = setInterval(() => {
+      setSeconds(s => {
+        const novo = s - 1;
+
+        // Entra na fase de aviso
+        if (novo === AVISO_ANTECEDENCIA) {
+          setPiscando(true);
+          setToastVisible(true);
+
+          // Agendar o avanço automático após os 5s de aviso
+          autoAdvanceRef.current = setTimeout(() => {
+            if (!canceladoRef.current && !isLastQuestion) {
+              onAutoAdvance();
+            }
+            setToastVisible(false);
+            setPiscando(false);
+          }, AVISO_ANTECEDENCIA * 1000);
+        }
+
+        if (novo <= 0) {
+          clearInterval(interval);
+          return 0;
+        }
+        return novo;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(toastTimerRef.current);
+      clearTimeout(autoAdvanceRef.current);
+    };
   }, [questionIndex]);
+
+  const handleCancelar = () => {
+    canceladoRef.current = true;
+    clearTimeout(autoAdvanceRef.current);
+    setToastVisible(false);
+    setPiscando(false);
+  };
+
   const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
   const secs = String(seconds % 60).padStart(2, "0");
+
+  const emAviso   = seconds <= AVISO_ANTECEDENCIA && seconds > 0;
+  const esgotado  = seconds === 0;
+
   return (
-    <span style={timerText}>
-      <TwemojiImg codepoint="23f1" size={22} alt="timer" />
-      {" "}{mins}:{secs}
-    </span>
+    <>
+      {/* Timer */}
+      <span style={{
+        ...timerText,
+        color: emAviso || esgotado ? "var(--cor-perigo)" : "var(--cor-primaria)",
+        animation: piscando ? "pulse 0.6s ease-in-out infinite" : "none",
+      }}>
+        <TwemojiImg codepoint="23f1" size={22} alt="timer" />
+        {" "}{mins}:{secs}
+      </span>
+
+      {/* Toast de desfazer */}
+      {toastVisible && (
+        <div style={toast}>
+          <span style={toastTexto}>
+            Avançando em {seconds}s…
+          </span>
+          <button onClick={handleCancelar} style={toastBtn}>
+            Cancelar
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -29,13 +109,13 @@ export default function SessionLivePage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const { finishSession, nextQuestion } = useSessions();
-  const { getQuizzes, getQuestions } = useQuizzes();
+  const { getQuizzes, getQuestions }    = useQuizzes();
 
-  const [session, setSession]           = useState(null);
-  const [players, setPlayers]           = useState([]);
-  const [quizNome, setQuizNome]         = useState("");
+  const [session, setSession]               = useState(null);
+  const [players, setPlayers]               = useState([]);
+  const [quizNome, setQuizNome]             = useState("");
   const [totalQuestions, setTotalQuestions] = useState(0);
-  const [respondidos, setRespondidos]   = useState(0);
+  const [respondidos, setRespondidos]       = useState(0);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "sessions", sessionId), (snap) => {
@@ -47,8 +127,8 @@ export default function SessionLivePage() {
   useEffect(() => {
     if (!session?.quizId) return;
     const fetch = async () => {
-      const quizzes = await getQuizzes();
-      const quiz = quizzes.find(q => q.id === session.quizId);
+      const quizzes   = await getQuizzes();
+      const quiz      = quizzes.find(q => q.id === session.quizId);
       if (quiz) setQuizNome(quiz.nome);
       const questions = await getQuestions(session.quizId);
       setTotalQuestions(questions.length);
@@ -66,7 +146,7 @@ export default function SessionLivePage() {
 
   useEffect(() => {
     if (!session) return;
-    const currentIndex = session.currentQuestionIndex ?? 0;
+    const currentIndex  = session.currentQuestionIndex ?? 0;
     const jaResponderam = players.filter(
       p => p.answers && Object.prototype.hasOwnProperty.call(p.answers, String(currentIndex))
     ).length;
@@ -77,17 +157,22 @@ export default function SessionLivePage() {
     if (session?.status === "finished") navigate(-1);
   }, [session?.status]);
 
+  const handleNext = useCallback(async () => {
+    const currentIndex = session?.currentQuestionIndex ?? 0;
+    await nextQuestion(sessionId, currentIndex, totalQuestions);
+  }, [session?.currentQuestionIndex, totalQuestions, sessionId]);
+
+  const handleFinish = async () => {
+    if (!confirm("Deseja encerrar a sessão? Esta ação não pode ser desfeita.")) return;
+    await finishSession(sessionId, session.quizId);
+  };
+
   if (!session) return <Spinner />;
 
   const currentIndex   = session.currentQuestionIndex ?? 0;
   const totalPlayers   = players.length;
   const isLastQuestion = currentIndex >= totalQuestions - 1;
   const pctRespondidos = totalPlayers > 0 ? (respondidos / totalPlayers) * 100 : 0;
-
-  const handleFinish = async () => {
-    if (!confirm("Deseja encerrar a sessão? Esta ação não pode ser desfeita.")) return;
-    await finishSession(sessionId, session.quizId);
-  };
 
   return (
     <div style={container}>
@@ -98,7 +183,13 @@ export default function SessionLivePage() {
           <p style={codigoLabel}>Código: <strong>{session.pin}</strong></p>
         </div>
         <div style={progressInfo}>
-          <SessionTimer questionIndex={currentIndex} />
+          {totalQuestions > 0 && (
+            <SessionTimer
+              questionIndex={currentIndex}
+              onAutoAdvance={handleNext}
+              isLastQuestion={isLastQuestion}
+            />
+          )}
           <span style={progressText}>
             Pergunta {currentIndex + 1} de {totalQuestions}
           </span>
@@ -131,9 +222,13 @@ export default function SessionLivePage() {
           Encerrar sessão
         </button>
         <button
-          onClick={() => nextQuestion(sessionId, currentIndex, totalQuestions)}
+          onClick={handleNext}
           disabled={isLastQuestion}
-          style={{ ...buttonPrimary, opacity: isLastQuestion ? 0.5 : 1, cursor: isLastQuestion ? "default" : "pointer" }}
+          style={{
+            ...buttonPrimary,
+            opacity: isLastQuestion ? 0.5 : 1,
+            cursor: isLastQuestion ? "default" : "pointer",
+          }}
         >
           Próxima pergunta
         </button>
@@ -142,6 +237,7 @@ export default function SessionLivePage() {
   );
 }
 
+/* Estilos */
 const container = {
   minHeight: "100vh", background: "transparent",
   display: "flex", flexDirection: "column", paddingBottom: "80px",
@@ -150,16 +246,50 @@ const topBar = {
   background: "var(--bg-card)", padding: "16px 24px",
   display: "flex", justifyContent: "space-between", alignItems: "center",
   boxShadow: "0 1px 4px var(--sombra)", borderBottom: "1px solid var(--borda)",
+  position: "relative", // ancora o toast
 };
-const quizLabel    = { fontSize: "18px", fontWeight: "bold", color: "var(--texto)", margin: "0 0 4px" };
-const codigoLabel  = { fontSize: "14px", color: "var(--texto-suave)", margin: 0 };
+const quizLabel   = { fontSize: "18px", fontWeight: "bold", color: "var(--texto)", margin: "0 0 4px" };
+const codigoLabel = { fontSize: "14px", color: "var(--texto-suave)", margin: 0 };
 const progressInfo = { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" };
 const timerText = {
-  fontSize: "22px", fontWeight: "bold", color: "var(--cor-primaria)",
+  fontSize: "22px", fontWeight: "bold",
   fontFamily: "'Fredoka One', sans-serif",
   display: "flex", alignItems: "center", gap: "6px",
+  transition: "color 0.3s",
 };
 const progressText = { fontSize: "13px", color: "var(--texto-muito-suave)" };
+
+/* Toast de desfazer - aparece abaixo do timer, ancorado à topBar */
+const toast = {
+  position: "absolute",
+  top: "calc(100% + 8px)",
+  right: "16px",
+  background: "var(--bg-card)",
+  border: "1px solid var(--borda)",
+  borderRadius: "10px",
+  boxShadow: "0 4px 16px var(--sombra)",
+  padding: "10px 14px",
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  zIndex: 200,
+  animation: "fadeInUp 0.2s ease",
+  minWidth: "220px",
+};
+const toastTexto = {
+  fontSize: "14px", color: "var(--texto)",
+  fontWeight: "600", flex: 1,
+};
+const toastBtn = {
+  padding: "5px 12px", borderRadius: "6px",
+  border: "1px solid var(--cor-perigo)",
+  background: "var(--cor-perigo-claro)",
+  color: "var(--cor-perigo)",
+  fontWeight: "bold", fontSize: "13px",
+  cursor: "pointer", whiteSpace: "nowrap",
+  fontFamily: "inherit",
+};
+
 const responseBar  = { maxWidth: "700px", margin: "20px auto 0", padding: "0 20px", width: "100%" };
 const responseText = { fontSize: "14px", color: "var(--texto-suave)", marginBottom: "8px", textAlign: "center" };
 const barraFundo   = {
@@ -184,7 +314,8 @@ const footer = {
 };
 const buttonPrimary = {
   padding: "12px 24px", borderRadius: "8px", border: "none",
-  background: "var(--cor-primaria)", color: "#fff", fontSize: "15px", fontWeight: "bold",
+  background: "var(--cor-primaria)", color: "#fff",
+  fontSize: "15px", fontWeight: "bold",
 };
 const buttonPerigo = {
   padding: "12px 24px", borderRadius: "8px", border: "none",
