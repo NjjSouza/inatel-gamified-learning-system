@@ -187,7 +187,7 @@ export default function ProfessorSidebar({ isOpen, onClose }) {
         {/* Rodapé: versão */}
         <div style={sidebarFooter}>
           <span style={{ fontSize: "11px", color: "var(--texto-muito-suave)" }}>
-            Inatelligent · Professor
+            Inatelligent - Professor
           </span>
         </div>
       </aside>
