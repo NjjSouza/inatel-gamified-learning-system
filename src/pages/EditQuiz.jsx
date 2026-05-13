@@ -205,7 +205,7 @@ export default function EditQuiz() {
 
         {tipo === "aberta" && (
           <p style={abertoHint}>
-            O aluno digitará uma resposta em texto livre. A correção é feita manualmente pelo professor após a sessão.
+            <strong>O aluno digitará uma resposta em texto livre. A correção é feita manualmente pelo professor após a sessão.</strong>
           </p>
         )}
 

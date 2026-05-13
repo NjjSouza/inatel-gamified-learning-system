@@ -12,7 +12,7 @@ Fundo: azul escuro */
   /* Cor primária */
   --cor-primaria:         #32ae36;
   --cor-primaria-hover:   #279b2b;
-  --cor-primaria-claro:   #e8f5e9;
+  --cor-primaria-claro:   #cbe4cd;
   --cor-primaria-borda:   rgba(50, 174, 54, 0.35);
   --cor-primaria-texto:   #1b5e20;
 
@@ -34,8 +34,8 @@ Fundo: azul escuro */
   --cor-alerta-claro:     #fff8e1;
 
   /* Fundos e superfícies (modo claro) */
-  --bg:                   #72a0c6;      /* azul escuro - fundo da página */
-  --bg-card:              #ffffff;      /* cards/painéis brancos */
+  --bg:                   #7d9db7;      /* azul escuro - fundo da página */
+  --bg-card:              #e8f1f4;      /* cards/painéis brancos */
   --bg-input:             #f4f8ff;      /* inputs levemente azulados */
   --bg-hover:             #f0f4f8;
 
@@ -46,7 +46,7 @@ Fundo: azul escuro */
   --texto-inv:            #ffffff;      /* texto sobre fundos escuros */
 
   /* Bordas e sombras (modo claro) */
-  --borda:                #dde3ec;
+  --borda:                #b4c6e1;
   --sombra:               rgba(26, 58, 92, 0.12);
   --sombra-card:          0 2px 12px rgba(26, 58, 92, 0.10);
 
@@ -61,9 +61,9 @@ Fundo: azul escuro */
 /* Modo escuro */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Verde, mais vivo no escuro */
-    --cor-primaria:         #4cbb52;
-    --cor-primaria-hover:   #3da843;
+    /* Verde */
+    --cor-primaria:         #188f1e;
+    --cor-primaria-hover:   #248429;
     --cor-primaria-claro:   #1b3a1e;
     --cor-primaria-borda:   rgba(76, 187, 82, 0.35);
     --cor-primaria-texto:   #a5d6a7;
@@ -82,15 +82,15 @@ Fundo: azul escuro */
     --cor-aviso-texto:      #ffccbc;
 
     /* Fundos (modo escuro) */
-    --bg:                   #2c5d86;      /* azul muito escuro */
+    --bg:                   #365d7d;      /* azul muito escuro */
     --bg-card:              #162032;       /* cards azul escuro */
     --bg-input:             #1a2a40;
     --bg-hover:             #1e2f45;
 
     /* Texto (modo escuro) */
     --texto:                #e8edf4;      /* quase branco */
-    --texto-suave:          #9ab0c8;      /* azul acinzentado */
-    --texto-muito-suave:    #5a7494;      /* cinza azulado */
+    --texto-suave:          #7a91aa;      /* azul acinzentado */
+    --texto-muito-suave:    #6982a5;      /* cinza azulado */
     --texto-inv:            #0d1f33;
 
     /* Bordas e sombras */
