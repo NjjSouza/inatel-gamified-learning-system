@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useCourses } from "../hooks/useCourses";
 import { useClasses } from "../hooks/useClasses";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import BackButton from "../components/BackButton";
 
 export default function ProfileProfessor() {
   const { user, logout } = useAuth();
@@ -35,7 +36,7 @@ export default function ProfileProfessor() {
 
   return (
     <div style={container}>
-      {/* Avatar + info */}
+      <BackButton />
       <div style={card}>
         <div style={avatarCircle}>{user?.nome?.charAt(0).toUpperCase() || "P"}</div>
         <h2 style={{ marginTop: "15px", marginBottom: "4px", color: "var(--texto)" }}>

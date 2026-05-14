@@ -6,6 +6,7 @@ import { collection, query, where, getDocs, doc, getDoc } from "firebase/firesto
 import { db } from "../services/firebase";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import TwemojiImg from "../components/TwemojiImg";
+import BackButton from "../components/BackButton";
 
 const NIVEL_CODEPOINTS = {
   "Pedra":    "1faa8",
@@ -70,7 +71,7 @@ export default function ProfileAluno() {
 
   return (
     <div style={container}>
-      {/* Avatar + info */}
+      <BackButton />
       <div style={card}>
         <div style={avatarCircle}>{user?.nome?.charAt(0).toUpperCase() || "A"}</div>
         <h2 style={{ marginTop: "15px", marginBottom: "4px", color: "var(--texto)" }}>

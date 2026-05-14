@@ -8,6 +8,7 @@ import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
 import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
+import BackButton from "../components/BackButton";
 
 const NIVEL_CODEPOINTS = {
   "Pedra":    "1faa8",
@@ -174,6 +175,7 @@ export default function CoursePageAluno() {
 
   return (
     <div style={container}>
+      <BackButton />
       <div style={header}>
         <h1>{course.nome}</h1>
         <p>Professor: {professor?.nome || professor?.email}</p>

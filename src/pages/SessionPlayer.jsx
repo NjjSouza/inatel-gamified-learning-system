@@ -88,15 +88,44 @@ export default function SessionPlayer() {
     }
   }, [session?.status]);
 
+  // Proteção: salva resposta vazia se aluno sair durante questão aberta
+  // Evita erros no console e garante registro no BD
   useEffect(() => {
-    if (session?.status !== "finished") return;
-    const fetchPlayers = async () => {
-      const q = query(collection(db, "session_players"), where("sessionId", "==", sessionId));
-      const snap = await getDocs(q);
-      setFinalPlayers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const current = shuffledQuestions[session?.currentQuestionIndex];
+    if (!current || current.tipo !== "aberta" || answered || !playerId) return;
+
+    const salvarSeNecessario = () => {
+      // Só age se ainda não respondeu
+      if (answered) return;
+      // Envia resposta em branco silenciosamente (navigator.sendBeacon não é suportado
+      // pelo Firestore SDK, então usamos uma flag para evitar duplo envio)
+      submitOpenAnswer(
+        playerId, sessionId, current.id,
+        session.currentQuestionIndex,
+        respostaAberta.trim() || "(sem resposta)",
+        user?.uid, session?.classId
+      ).catch(() => {}); // ignora erros silenciosamente ao sair
     };
-    fetchPlayers();
-  }, [session?.status]);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") salvarSeNecessario();
+    };
+    const handleBeforeUnload = () => salvarSeNecessario();
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [
+    session?.currentQuestionIndex,
+    shuffledQuestions,
+    answered,
+    playerId,
+    respostaAberta,
+  ]);
 
   if (!session) return <Spinner />;
 
@@ -149,7 +178,7 @@ export default function SessionPlayer() {
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay
-            src="https://lottie.host/e43f0777-f3f2-41f3-b66c-0ba87a9a1e60/Nt0MvUuGdE.lottie"
+            src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
             loop duration={3100} onFinish={() => setShowAnswerOverlay(false)}
           />
         )}
@@ -165,7 +194,7 @@ export default function SessionPlayer() {
           {answered ? (
             <div style={answeredOpenBox}>
               <p style={{ margin: 0, color: "var(--cor-primaria)", fontWeight: "bold", fontSize: "15px" }}>
-                Resposta enviada! 
+                Resposta enviada! Aguarde o professor corrigir.
               </p>
             </div>
           ) : (
@@ -216,7 +245,7 @@ export default function SessionPlayer() {
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay
-            src="https://lottie.host/e43f0777-f3f2-41f3-b66c-0ba87a9a1e60/Nt0MvUuGdE.lottie"
+            src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
             loop duration={3100} onFinish={() => setShowAnswerOverlay(false)}
           />
         )}

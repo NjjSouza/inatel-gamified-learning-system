@@ -7,6 +7,7 @@ import { useQuizzes } from "../hooks/useQuizzes";
 import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
 import Spinner from "../components/Spinner";
+import BackButton from "../components/BackButton";
 
 // Tempo total por questão (segundos)
 const TEMPO_QUESTAO   = 40;
@@ -176,6 +177,7 @@ export default function SessionLivePage() {
 
   return (
     <div style={container}>
+      <BackButton />
       {/* Cabeçalho */}
       <div style={topBar}>
         <div>

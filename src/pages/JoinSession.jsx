@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSessions } from "../hooks/useSessions";
 import { useNavigate } from "react-router-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import BackButton from "../components/BackButton";
 
 export default function JoinSession() {
   const { getSessionByPin, joinSession } = useSessions();
@@ -29,7 +30,7 @@ export default function JoinSession() {
   return (
     <div style={pageWrap}>
       <div style={card}>
-        {/* Animação de entrada */}
+        <BackButton />
         <DotLottieReact
           src="https://lottie.host/c2c128c4-cea9-4aca-a496-8a84dc74d7f2/LgpJ2VitEf.lottie"
           autoplay loop

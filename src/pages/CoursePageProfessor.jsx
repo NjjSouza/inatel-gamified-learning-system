@@ -5,6 +5,7 @@ import { useClasses } from "../hooks/useClasses";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
+import BackButton from "../components/BackButton";
 
 function CoursePageProfessor() {
   const { courseId } = useParams();
@@ -48,6 +49,7 @@ function CoursePageProfessor() {
 
   return (
     <div style={container}>
+      <BackButton />
       <div style={header}>
         <h1>{course.nome}</h1>
         <p style={{ color: "var(--texto-suave)" }}>

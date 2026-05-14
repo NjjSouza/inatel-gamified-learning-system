@@ -60,7 +60,7 @@ function AppLayout() {
       {/* Conteúdo principal */}
       <div style={{
         paddingTop: "56px", // altura da Navbar
-        marginRight: contentMarginLeft,
+        marginLeft: contentMarginLeft,
         transition: "margin-right 0.25s ease",
         minHeight: "100vh",
       }}>

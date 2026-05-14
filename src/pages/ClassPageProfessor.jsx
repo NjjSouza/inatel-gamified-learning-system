@@ -7,6 +7,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
 import TwemojiImg from "../components/TwemojiImg";
+import BackButton from "../components/BackButton";
 
 // Níveis
 const NIVEIS = [
@@ -169,7 +170,7 @@ export default function ClassPageProfessor() {
     fetchXp();
   }, [enrollments, classId]);
 
-  // Abrir histórico de respostas abertas 
+  // Abrir histórico de respostas abertas
   const handleExpandOpenSession = async (sessionId) => {
     if (expandedOpenSession === sessionId) {
       setExpandedOpenSession(null);
@@ -244,6 +245,7 @@ export default function ClassPageProfessor() {
 
   return (
     <div style={container}>
+      <BackButton />
       <div style={header}>
         <h1>Turma {classData.semestre}</h1>
         <span style={{
@@ -371,9 +373,25 @@ export default function ClassPageProfessor() {
                 {/* Botão de correção de questões abertas */}
                 {temPendente && (
                   <div style={corrigirRow}>
-                    <span style={{ fontSize: "13px", color: "var(--cor-aviso)" }}>
-                      Respostas abertas aguardam correção
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <span style={{ fontSize: "13px", color: "var(--cor-aviso)", fontWeight: "600" }}>
+                        Respostas abertas aguardam correção
+                      </span>
+                      {(() => {
+                        const expireAt = s.expireAt?.toDate?.();
+                        if (!expireAt) return null;
+                        const diasRestantes = Math.ceil((expireAt - new Date()) / (1000 * 60 * 60 * 24));
+                        if (diasRestantes > 7) return null;
+                        return (
+                          <span style={{
+                            fontSize: "12px", fontWeight: "bold",
+                            color: diasRestantes <= 3 ? "var(--cor-perigo)" : "var(--cor-aviso)",
+                          }}>
+                            ⚠ Expira em {diasRestantes} dia{diasRestantes !== 1 ? "s" : ""} — corrija antes que os alunos percam o XP!
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <button onClick={() => navigate(`/professor/sessao/${s.id}/corrigir`)} style={buttonCorrigir}>
                       Corrigir respostas
                     </button>
@@ -514,7 +532,7 @@ export default function ClassPageProfessor() {
                                       fontSize: "12px", fontWeight: "bold",
                                       color: resp.isCorrect ? "var(--cor-primaria)" : "var(--cor-perigo)",
                                     }}>
-                                      {resp.isCorrect ? `✓ Correto · +${resp.xp} XP` : "✗ Errado"}
+                                      {resp.isCorrect ? `Correto · +${resp.xp} XP` : "✗ Errado"}
                                     </span>
                                   ) : (
                                     <span style={badgePendente}>aguardando correção</span>
@@ -570,7 +588,7 @@ export default function ClassPageProfessor() {
                 onChange={e => setOrdenacao(e.target.value)}
                 style={selectStyle}
               >
-                <option value="alfabetica">A - Z</option>
+                <option value="alfabetica">A → Z</option>
                 <option value="ranking">Ranking (XP)</option>
               </select>
             </div>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import Spinner from "../components/Spinner";
+import BackButton from "../components/BackButton";
 import TwemojiImg from "../components/TwemojiImg";
 
 export default function CorrectOpenAnswers() {
@@ -13,12 +14,15 @@ export default function CorrectOpenAnswers() {
   const { getOpenAnswersForSession, gradeOpenAnswer } = useSessions();
   const { getQuestions } = useQuizzes();
 
-  const [session, setSession]   = useState(null);
-  const [questoes, setQuestoes] = useState([]);
+  const [session, setSession]     = useState(null);
+  const [questoes, setQuestoes]   = useState([]);
   const [respostas, setRespostas] = useState([]);
-  const [nomes, setNomes]       = useState({});
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState({});
+  const [nomes, setNomes]         = useState({});
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState({});
+
+  // XP parcial: { [answerId]: string } - valor digitado pelo professor
+  const [xpCustom, setXpCustom] = useState({});
 
   const fetchTudo = async () => {
     setLoading(true);
@@ -39,12 +43,20 @@ export default function CorrectOpenAnswers() {
 
       const userIds = [...new Set(respostasData.map(r => r.userId).filter(Boolean))];
       const nomesMap = {};
-      await Promise.all(userIds.map(async (uid) => {
+      await Promise.all(userIds.map(async uid => {
         const snap = await getDoc(doc(db, "usuarios", uid));
         nomesMap[uid] = snap.exists() ? (snap.data().nome || snap.data().email) : uid;
       }));
       setNomes(nomesMap);
       setRespostas(respostasData);
+
+      // Inicializa xpCustom com o XP máximo de cada questão
+      const customInicial = {};
+      respostasData.forEach(r => {
+        const questao = todasQuestoes.find(q => q.id === r.questionId);
+        customInicial[r.id] = String(questao?.xp ?? 10);
+      });
+      setXpCustom(customInicial);
     } finally {
       setLoading(false);
     }
@@ -52,33 +64,41 @@ export default function CorrectOpenAnswers() {
 
   useEffect(() => { fetchTudo(); }, [sessionId]);
 
+  // Corrige com XP customizado (pode ser parcial)
   const handleGrade = async (resposta, isCorrect) => {
-    const acao = isCorrect ? "Correto" : "Errado";
+    const xpMaximo  = questoes.find(q => q.id === resposta.questionId)?.xp ?? 10;
+    const xpDigitado = parseInt(xpCustom[resposta.id] ?? xpMaximo, 10);
+    const xpFinal   = isCorrect
+      ? (isNaN(xpDigitado) || xpDigitado < 0 ? 0 : Math.min(xpDigitado, xpMaximo))
+      : 0;
+
+    const acao = isCorrect
+      ? `Correto (+${xpFinal} XP)`
+      : "Errado (0 XP)";
 
     // Se já foi corrigida anteriormente, reforça avisos
     if (resposta.isCorrect !== null && resposta.isCorrect !== undefined) {
       if (!window.confirm(
         `Esta resposta já foi marcada como "${resposta.isCorrect ? "correta" : "errada"}".\n` +
         `Deseja alterá-la para "${acao}"?\n\n` +
-        (isCorrect
-          ? "Isso irá conceder XP adicional ao aluno."
-          : "O XP já concedido NÃO será revertido automaticamente.")
+        (!isCorrect && resposta.isCorrect
+          ? "Atenção: o XP já concedido NÃO será revertido automaticamente."
+          : "")
       )) return;
     } else {
-      if (!window.confirm(
-        `Marcar como ${acao}?\n\n"${resposta.respostaTexto}"\n\n` +
-        (isCorrect ? `O aluno receberá XP por esta questão.` : "Nenhum XP será concedido.")
-      )) return;
+      if (!window.confirm(`Marcar como ${acao}?\n\n"${resposta.respostaTexto}"`)) return;
     }
 
     setSaving(prev => ({ ...prev, [resposta.id]: true }));
     try {
-      // Busca o XP da questão correspondente
-      const questao = questoes.find(q => q.id === resposta.questionId);
-      const xpAmount = questao?.xp ?? 10;
-      await gradeOpenAnswer(resposta.id, isCorrect, resposta.userId, resposta.classId, sessionId, resposta.questionId, xpAmount);
+      await gradeOpenAnswer(
+        resposta.id, isCorrect,
+        resposta.userId, resposta.classId,
+        sessionId, resposta.questionId,
+        xpFinal
+      );
       setRespostas(prev => prev.map(r =>
-        r.id === resposta.id ? { ...r, isCorrect, xp: isCorrect ? xpAmount : 0 } : r
+        r.id === resposta.id ? { ...r, isCorrect, xp: xpFinal } : r
       ));
     } catch (e) {
       alert("Erro ao salvar correção: " + e.message);
@@ -90,24 +110,26 @@ export default function CorrectOpenAnswers() {
   if (loading) return <Spinner />;
   if (!session) return <div style={container}><p>Sessão não encontrada.</p></div>;
 
-  // Agrupa respostas por questionId
+  // Agrupa respostas por questão
   const respostasPorQuestao = {};
   questoes.forEach(q => { respostasPorQuestao[q.id] = []; });
   respostas.forEach(r => {
     if (respostasPorQuestao[r.questionId]) respostasPorQuestao[r.questionId].push(r);
   });
 
-  const totalRespostas = respostas.length;
+  const totalRespostas  = respostas.length;
   const totalCorrigidas = respostas.filter(r => r.isCorrect !== null && r.isCorrect !== undefined).length;
   const tudo100 = totalRespostas > 0 && totalCorrigidas === totalRespostas;
 
   return (
     <div style={container}>
+      <BackButton />
+
       <div style={header}>
         <div>
           <h1>Correção de Questões Abertas</h1>
           <p style={{ color: "var(--texto-suave)", fontSize: "14px", margin: "4px 0 0" }}>
-            Sessão encerrada - Código: <strong>{session.pin}</strong>
+            Sessão encerrada · Código: <strong>{session.pin}</strong>
           </p>
         </div>
         <div style={progressBox}>
@@ -123,13 +145,16 @@ export default function CorrectOpenAnswers() {
       )}
 
       {questoes.length === 0 ? (
-        <div style={card}><p style={{ color: "var(--texto-suave)" }}>Nenhuma questão aberta encontrada.</p></div>
+        <div style={card}>
+          <p style={{ color: "var(--texto-suave)" }}>Nenhuma questão aberta encontrada.</p>
+        </div>
       ) : (
         questoes.map((questao, qi) => {
           const respostasQuestao = respostasPorQuestao[questao.id] || [];
           const corrigidasQuestao = respostasQuestao.filter(
             r => r.isCorrect !== null && r.isCorrect !== undefined
           ).length;
+          const xpMax = questao.xp ?? 10;
 
           return (
             <div key={questao.id} style={card}>
@@ -137,8 +162,8 @@ export default function CorrectOpenAnswers() {
               <div style={questaoHeader}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={questaoNum}>Questão {qi + 1}</span>
-                  <span style={xpBadge}>
-                    <TwemojiImg codepoint="26a1" size={14} alt="xp" /> {questao.xp ?? 10} XP
+                  <span style={xpBadgeStyle}>
+                    <TwemojiImg codepoint="26a1" size={14} alt="xp" /> {xpMax} XP máx.
                   </span>
                 </div>
                 <span style={corrigidasBadge(corrigidasQuestao, respostasQuestao.length)}>
@@ -152,14 +177,16 @@ export default function CorrectOpenAnswers() {
                   Nenhum aluno respondeu esta questão.
                 </p>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {respostasQuestao.map((resp) => {
-                    const nome = nomes[resp.userId] || "Aluno";
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {respostasQuestao.map(resp => {
+                    const nome       = nomes[resp.userId] || "Aluno";
                     const jaCorrigida = resp.isCorrect !== null && resp.isCorrect !== undefined;
-                    const isSaving = saving[resp.id];
+                    const isSaving   = saving[resp.id];
+                    const xpAtual    = xpCustom[resp.id] ?? String(xpMax);
 
                     return (
                       <div key={resp.id} style={respostaCard(resp.isCorrect)}>
+                        {/* Cabeçalho da resposta */}
                         <div style={respostaTop}>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <span style={alunoAvatar}>{nome.charAt(0).toUpperCase()}</span>
@@ -172,30 +199,17 @@ export default function CorrectOpenAnswers() {
                                   fontSize: "11px", fontWeight: "bold", display: "block", marginTop: "2px",
                                   color: resp.isCorrect ? "var(--cor-primaria)" : "var(--cor-perigo)",
                                 }}>
-                                  {resp.isCorrect ? `Correto (+${resp.xp} XP)` : "Errado"}
+                                  {resp.isCorrect ? `Correto · +${resp.xp} XP` : "✗ Errado · 0 XP"}
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          {!jaCorrigida ? (
-                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                              <button
-                                onClick={() => handleGrade(resp, true)} disabled={isSaving}
-                                style={{ ...btnCerto, opacity: isSaving ? 0.6 : 1 }}
-                              >
-                                {isSaving ? "..." : "Correto"}
-                              </button>
-                              <button
-                                onClick={() => handleGrade(resp, false)} disabled={isSaving}
-                                style={{ ...btnErrado, opacity: isSaving ? 0.6 : 1 }}
-                              >
-                                {isSaving ? "..." : "Errado"}
-                              </button>
-                            </div>
-                          ) : (
+                          {/* Botão alterar se já corrigida */}
+                          {jaCorrigida && (
                             <button
-                              onClick={() => handleGrade(resp, !resp.isCorrect)} disabled={isSaving}
+                              onClick={() => handleGrade(resp, !resp.isCorrect)}
+                              disabled={isSaving}
                               style={btnAlterar}
                             >
                               {isSaving ? "..." : "Alterar"}
@@ -203,14 +217,62 @@ export default function CorrectOpenAnswers() {
                           )}
                         </div>
 
+                        {/* Texto da resposta */}
                         <div style={respostaTextoBox}>
-                          <p style={{
-                            margin: 0, fontSize: "14px", color: "var(--texto)",
-                            lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word",
-                          }}>
+                          <p style={{ margin: 0, fontSize: "14px", color: "var(--texto)", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                             {resp.respostaTexto}
                           </p>
                         </div>
+
+                        {/* Controles de correção */}
+                        {!jaCorrigida && (
+                          <div style={correcaoRow}>
+                            {/* Input de XP parcial */}
+                            <div style={xpInputRow}>
+                              <label style={xpLabel}>XP a conceder:</label>
+                              <input
+                                type="number"
+                                min="0"
+                                max={xpMax}
+                                value={xpAtual}
+                                onChange={e => setXpCustom(prev => ({ ...prev, [resp.id]: e.target.value }))}
+                                style={xpInput}
+                                disabled={isSaving}
+                              />
+                              <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>
+                                de {xpMax}
+                              </span>
+                            </div>
+
+                            {/* Botões correto/errado */}
+                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                              <button
+                                onClick={() => handleGrade(resp, true)}
+                                disabled={isSaving}
+                                style={{ ...btnCerto, opacity: isSaving ? 0.6 : 1 }}
+                              >
+                                {isSaving ? "..." : "Correto"}
+                              </button>
+                              <button
+                                onClick={() => handleGrade(resp, false)}
+                                disabled={isSaving}
+                                style={{ ...btnErrado, opacity: isSaving ? 0.6 : 1 }}
+                              >
+                                {isSaving ? "..." : "✗ Errado"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Data/hora da resposta */}
+                        {resp.answeredAt?.toDate && (
+                          <p style={{ fontSize: "11px", color: "var(--texto-muito-suave)", marginTop: "8px", textAlign: "right" }}>
+                            Respondido em {resp.answeredAt.toDate().toLocaleString("pt-BR", {
+                              day: "2-digit", month: "2-digit",
+                              hour: "2-digit", minute: "2-digit",
+                            })}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
@@ -246,9 +308,8 @@ const progressNum = {
 const progressLabel = { fontSize: "12px", color: "var(--texto-muito-suave)" };
 const successBanner = {
   background: "var(--cor-primaria-claro)", color: "var(--cor-primaria-texto)",
-  borderRadius: "10px", padding: "14px 20px",
-  marginBottom: "20px", fontWeight: "bold", fontSize: "14px",
-  border: "1px solid var(--cor-primaria-borda)",
+  borderRadius: "10px", padding: "14px 20px", marginBottom: "20px",
+  fontWeight: "bold", fontSize: "14px", border: "1px solid var(--cor-primaria-borda)",
 };
 const card = {
   background: "var(--bg-card)", borderRadius: "12px",
@@ -263,7 +324,7 @@ const questaoNum = {
   fontSize: "12px", fontWeight: "bold", color: "var(--texto-muito-suave)",
   textTransform: "uppercase", letterSpacing: "0.5px",
 };
-const xpBadge = {
+const xpBadgeStyle = {
   fontSize: "12px", fontWeight: "bold",
   background: "var(--cor-primaria-claro)", color: "var(--cor-primaria-texto)",
   padding: "2px 8px", borderRadius: "10px",
@@ -273,8 +334,7 @@ const corrigidasBadge = (done, total) => ({
   fontSize: "12px", fontWeight: "bold",
   background: done === total && total > 0 ? "var(--cor-primaria-claro)" : "var(--bg-input)",
   color: done === total && total > 0 ? "var(--cor-primaria-texto)" : "var(--texto-suave)",
-  padding: "3px 10px", borderRadius: "10px",
-  border: "1px solid var(--borda)",
+  padding: "3px 10px", borderRadius: "10px", border: "1px solid var(--borda)",
 });
 const questaoTexto = {
   fontSize: "16px", fontWeight: "600", color: "var(--texto)",
@@ -302,6 +362,27 @@ const alunoAvatar = {
   display: "flex", alignItems: "center", justifyContent: "center",
   fontSize: "15px", fontWeight: "bold", flexShrink: 0,
 };
+const respostaTextoBox = {
+  background: "var(--bg-card)", borderRadius: "8px",
+  padding: "10px 14px", border: "1px solid var(--borda)",
+};
+const correcaoRow = {
+  display: "flex", alignItems: "center", justifyContent: "space-between",
+  marginTop: "12px", flexWrap: "wrap", gap: "10px",
+  paddingTop: "12px", borderTop: "1px solid var(--borda)",
+};
+const xpInputRow = {
+  display: "flex", alignItems: "center", gap: "8px",
+};
+const xpLabel = {
+  fontSize: "13px", fontWeight: "600", color: "var(--texto-suave)", whiteSpace: "nowrap",
+};
+const xpInput = {
+  width: "64px", padding: "5px 8px", borderRadius: "6px",
+  border: "1px solid var(--borda)", background: "var(--bg-input)",
+  color: "var(--texto)", fontSize: "15px", fontWeight: "bold",
+  textAlign: "center", boxSizing: "border-box", fontFamily: "inherit",
+};
 const btnCerto = {
   padding: "7px 14px", borderRadius: "8px", border: "none",
   background: "var(--cor-primaria)", color: "#fff",
@@ -316,8 +397,5 @@ const btnAlterar = {
   padding: "6px 12px", borderRadius: "8px",
   border: "1px solid var(--borda)", background: "var(--bg-card)",
   color: "var(--texto-suave)", fontSize: "12px", cursor: "pointer",
-};
-const respostaTextoBox = {
-  background: "var(--bg-card)", borderRadius: "8px",
-  padding: "10px 14px", border: "1px solid var(--borda)",
+  fontFamily: "inherit",
 };
