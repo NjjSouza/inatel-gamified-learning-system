@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useSessions } from "../hooks/useSessions";
@@ -8,10 +8,14 @@ import Spinner from "../components/Spinner";
 import BackButton from "../components/BackButton";
 import TwemojiImg from "../components/TwemojiImg";
 
+// Estados possíveis de correção local (nunca vão ao BD até confirmação final)
+// null     = ainda não corrigido
+// true     = marcado como correto (localmente)
+// false    = marcado como errado (localmente)
+
 export default function CorrectOpenAnswers() {
   const { sessionId } = useParams();
-  const navigate = useNavigate();
-  const { getOpenAnswersForSession, gradeOpenAnswer } = useSessions();
+  const { getOpenAnswersForSession, gradeOpenAnswersBatch } = useSessions();
   const { getQuestions } = useQuizzes();
 
   const [session, setSession]     = useState(null);
@@ -19,10 +23,11 @@ export default function CorrectOpenAnswers() {
   const [respostas, setRespostas] = useState([]);
   const [nomes, setNomes]         = useState({});
   const [loading, setLoading]     = useState(true);
-  const [saving, setSaving]       = useState({});
+  const [enviando, setEnviando]   = useState(false);
+  const [enviado, setEnviado]     = useState(false);
 
-  // XP parcial: { [answerId]: string } - valor digitado pelo professor
-  const [xpCustom, setXpCustom] = useState({});
+  // Estado local de correção: { [answerId]: { isCorrect: bool|null, xp: number } }
+  const [correcaoLocal, setCorrecaoLocal] = useState({});
 
   const fetchTudo = async () => {
     setLoading(true);
@@ -50,13 +55,27 @@ export default function CorrectOpenAnswers() {
       setNomes(nomesMap);
       setRespostas(respostasData);
 
-      // Inicializa xpCustom com o XP máximo de cada questão
-      const customInicial = {};
+      // Inicializa estado local com o que já foi salvo anteriormente (se houver)
+      // e com o XP máximo de cada questão como valor padrão
+      const inicialLocal = {};
       respostasData.forEach(r => {
         const questao = todasQuestoes.find(q => q.id === r.questionId);
-        customInicial[r.id] = String(questao?.xp ?? 10);
+        const xpMax   = questao?.xp ?? 10;
+        inicialLocal[r.id] = {
+          // Se já tinha correção salva no BD, parte dela; senão, null
+          isCorrect: (r.isCorrect !== null && r.isCorrect !== undefined) ? r.isCorrect : null,
+          xp: r.xp > 0 ? r.xp : xpMax,
+          xpMax,
+        };
       });
-      setXpCustom(customInicial);
+      setCorrecaoLocal(inicialLocal);
+
+      // Se todas já estavam corrigidas, marca como enviado
+      const todasCorrigidas = respostasData.every(
+        r => r.isCorrect !== null && r.isCorrect !== undefined
+      );
+      if (todasCorrigidas && respostasData.length > 0) setEnviado(true);
+
     } finally {
       setLoading(false);
     }
@@ -64,46 +83,59 @@ export default function CorrectOpenAnswers() {
 
   useEffect(() => { fetchTudo(); }, [sessionId]);
 
-  // Corrige com XP customizado (pode ser parcial)
-  const handleGrade = async (resposta, isCorrect) => {
-    const xpMaximo  = questoes.find(q => q.id === resposta.questionId)?.xp ?? 10;
-    const xpDigitado = parseInt(xpCustom[resposta.id] ?? xpMaximo, 10);
-    const xpFinal   = isCorrect
-      ? (isNaN(xpDigitado) || xpDigitado < 0 ? 0 : Math.min(xpDigitado, xpMaximo))
-      : 0;
+  // Marcar localmente
+  const marcarLocal = (answerId, isCorrect) => {
+    setCorrecaoLocal(prev => ({
+      ...prev,
+      [answerId]: { ...prev[answerId], isCorrect },
+    }));
+  };
 
-    const acao = isCorrect
-      ? `Correto (+${xpFinal} XP)`
-      : "Errado (0 XP)";
+  const setXpLocal = (answerId, valor) => {
+    setCorrecaoLocal(prev => ({
+      ...prev,
+      [answerId]: { ...prev[answerId], xp: valor },
+    }));
+  };
 
-    // Se já foi corrigida anteriormente, reforça avisos
-    if (resposta.isCorrect !== null && resposta.isCorrect !== undefined) {
-      if (!window.confirm(
-        `Esta resposta já foi marcada como "${resposta.isCorrect ? "correta" : "errada"}".\n` +
-        `Deseja alterá-la para "${acao}"?\n\n` +
-        (!isCorrect && resposta.isCorrect
-          ? "Atenção: o XP já concedido NÃO será revertido automaticamente."
-          : "")
-      )) return;
-    } else {
-      if (!window.confirm(`Marcar como ${acao}?\n\n"${resposta.respostaTexto}"`)) return;
+  // Confirmar e enviar tudo
+  const handleConfirmar = async () => {
+    const pendentes = respostas.filter(
+      r => correcaoLocal[r.id]?.isCorrect === null
+    );
+    if (pendentes.length > 0) {
+      alert(`Ainda há ${pendentes.length} resposta${pendentes.length > 1 ? "s" : ""} sem correção. Corrija todas antes de confirmar.`);
+      return;
     }
 
-    setSaving(prev => ({ ...prev, [resposta.id]: true }));
+    if (!window.confirm(
+      `Confirmar e enviar XP para todos os alunos?\n\n` +
+      `Esta ação creditará o XP das respostas corretas. Você ainda poderá visualizar as respostas depois.`
+    )) return;
+
+    setEnviando(true);
     try {
-      await gradeOpenAnswer(
-        resposta.id, isCorrect,
-        resposta.userId, resposta.classId,
-        sessionId, resposta.questionId,
-        xpFinal
-      );
-      setRespostas(prev => prev.map(r =>
-        r.id === resposta.id ? { ...r, isCorrect, xp: xpFinal } : r
-      ));
+      const correcoes = respostas.map(r => {
+        const local = correcaoLocal[r.id];
+        const xpFinal = local.isCorrect
+          ? Math.max(0, Math.min(parseInt(local.xp, 10) || 0, local.xpMax))
+          : 0;
+        return {
+          answerId:   r.id,
+          isCorrect:  local.isCorrect,
+          xpAmount:   xpFinal,
+          userId:     r.userId,
+          classId:    r.classId,
+          questionId: r.questionId,
+        };
+      });
+
+      await gradeOpenAnswersBatch(correcoes, sessionId);
+      setEnviado(true);
     } catch (e) {
-      alert("Erro ao salvar correção: " + e.message);
+      alert("Erro ao enviar correções: " + e.message);
     } finally {
-      setSaving(prev => ({ ...prev, [resposta.id]: false }));
+      setEnviando(false);
     }
   };
 
@@ -118,56 +150,64 @@ export default function CorrectOpenAnswers() {
   });
 
   const totalRespostas  = respostas.length;
-  const totalCorrigidas = respostas.filter(r => r.isCorrect !== null && r.isCorrect !== undefined).length;
-  const tudo100 = totalRespostas > 0 && totalCorrigidas === totalRespostas;
+  const totalCorrigidas = respostas.filter(r => correcaoLocal[r.id]?.isCorrect !== null).length;
+  const todasMarcadas   = totalCorrigidas === totalRespostas && totalRespostas > 0;
 
   return (
     <div style={container}>
       <BackButton />
 
+      {/* Cabeçalho */}
       <div style={header}>
         <div>
           <h1>Correção de Questões Abertas</h1>
           <p style={{ color: "var(--texto-suave)", fontSize: "14px", margin: "4px 0 0" }}>
-            Sessão encerrada · Código: <strong>{session.pin}</strong>
+            Sessão encerrada - Código: <strong>{session.pin}</strong>
           </p>
         </div>
         <div style={progressBox}>
           <span style={progressNum}>{totalCorrigidas}/{totalRespostas}</span>
-          <span style={progressLabel}>corrigidas</span>
+          <span style={progressLabel}>marcadas</span>
         </div>
       </div>
 
-      {tudo100 && (
+      {/* Banner de enviado */}
+      {enviado && (
         <div style={successBanner}>
-          Todas as respostas foram corrigidas! XPs creditados aos alunos.
+          XPs enviados! Os alunos já podem ver seus pontos.
         </div>
       )}
 
-      {questoes.length === 0 ? (
-        <div style={card}>
-          <p style={{ color: "var(--texto-suave)" }}>Nenhuma questão aberta encontrada.</p>
+      {/* Banner de instrução (antes de enviar) */}
+      {!enviado && (
+        <div style={infoBanner}>
+          <strong>Orientações:</strong> marque cada resposta como correta ou errada e ajuste o XP se quiser.
+          Nenhum ponto é enviado ainda - só ao clicar em <strong>"Confirmar e enviar XP"</strong> no final.
+          Você pode editar à vontade antes de confirmar.
         </div>
+      )}
+
+      {/* Questões */}
+      {questoes.length === 0 ? (
+        <div style={card}><p style={{ color: "var(--texto-suave)" }}>Nenhuma questão aberta encontrada.</p></div>
       ) : (
         questoes.map((questao, qi) => {
-          const respostasQuestao = respostasPorQuestao[questao.id] || [];
-          const corrigidasQuestao = respostasQuestao.filter(
-            r => r.isCorrect !== null && r.isCorrect !== undefined
-          ).length;
-          const xpMax = questao.xp ?? 10;
+          const respostasQuestao  = respostasPorQuestao[questao.id] || [];
+          const marcadasQuestao   = respostasQuestao.filter(r => correcaoLocal[r.id]?.isCorrect !== null).length;
+          const xpMax             = questao.xp ?? 10;
 
           return (
             <div key={questao.id} style={card}>
               {/* Cabeçalho da questão */}
               <div style={questaoHeader}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={questaoNum}>Questão {qi + 1}</span>
+                  <span style={questaoNumStyle}>Questão {qi + 1}</span>
                   <span style={xpBadgeStyle}>
                     <TwemojiImg codepoint="26a1" size={14} alt="xp" /> {xpMax} XP máx.
                   </span>
                 </div>
-                <span style={corrigidasBadge(corrigidasQuestao, respostasQuestao.length)}>
-                  {corrigidasQuestao}/{respostasQuestao.length} corrigidas
+                <span style={corrigidasBadge(marcadasQuestao, respostasQuestao.length)}>
+                  {marcadasQuestao}/{respostasQuestao.length} marcadas
                 </span>
               </div>
               <p style={questaoTexto}>{questao.pergunta}</p>
@@ -179,14 +219,13 @@ export default function CorrectOpenAnswers() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {respostasQuestao.map(resp => {
-                    const nome       = nomes[resp.userId] || "Aluno";
-                    const jaCorrigida = resp.isCorrect !== null && resp.isCorrect !== undefined;
-                    const isSaving   = saving[resp.id];
-                    const xpAtual    = xpCustom[resp.id] ?? String(xpMax);
+                    const nome    = nomes[resp.userId] || "Aluno";
+                    const local   = correcaoLocal[resp.id] ?? { isCorrect: null, xp: xpMax, xpMax };
+                    const marcada = local.isCorrect !== null;
 
                     return (
-                      <div key={resp.id} style={respostaCard(resp.isCorrect)}>
-                        {/* Cabeçalho da resposta */}
+                      <div key={resp.id} style={respostaCard(local.isCorrect)}>
+                        {/* Cabeçalho */}
                         <div style={respostaTop}>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <span style={alunoAvatar}>{nome.charAt(0).toUpperCase()}</span>
@@ -194,26 +233,45 @@ export default function CorrectOpenAnswers() {
                               <span style={{ fontSize: "14px", fontWeight: "bold", color: "var(--texto)", display: "block" }}>
                                 {nome}
                               </span>
-                              {jaCorrigida && (
+                              {marcada && (
                                 <span style={{
-                                  fontSize: "11px", fontWeight: "bold", display: "block", marginTop: "2px",
-                                  color: resp.isCorrect ? "var(--cor-primaria)" : "var(--cor-perigo)",
+                                  fontSize: "11px", fontWeight: "bold",
+                                  display: "block", marginTop: "2px",
+                                  color: local.isCorrect ? "var(--cor-primaria)" : "var(--cor-perigo)",
                                 }}>
-                                  {resp.isCorrect ? `Correto · +${resp.xp} XP` : "✗ Errado · 0 XP"}
+                                  {local.isCorrect
+                                    ? `Correto - ${local.xp} XP ${enviado ? "enviado" : "a enviar"}`
+                                    : `Errado - 0 XP`
+                                  }
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          {/* Botão alterar se já corrigida */}
-                          {jaCorrigida && (
-                            <button
-                              onClick={() => handleGrade(resp, !resp.isCorrect)}
-                              disabled={isSaving}
-                              style={btnAlterar}
-                            >
-                              {isSaving ? "..." : "Alterar"}
-                            </button>
+                          {/* Botões de marcação - sempre visíveis enquanto não enviado */}
+                          {!enviado && (
+                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                              <button
+                                onClick={() => marcarLocal(resp.id, true)}
+                                style={{
+                                  ...btnCerto,
+                                  opacity: local.isCorrect === true ? 1 : 0.45,
+                                  outline: local.isCorrect === true ? "2px solid var(--cor-primaria)" : "none",
+                                }}
+                              >
+                                Correto
+                              </button>
+                              <button
+                                onClick={() => marcarLocal(resp.id, false)}
+                                style={{
+                                  ...btnErrado,
+                                  opacity: local.isCorrect === false ? 1 : 0.45,
+                                  outline: local.isCorrect === false ? "2px solid var(--cor-perigo)" : "none",
+                                }}
+                              >
+                                Errado
+                              </button>
+                            </div>
                           )}
                         </div>
 
@@ -224,47 +282,25 @@ export default function CorrectOpenAnswers() {
                           </p>
                         </div>
 
-                        {/* Controles de correção */}
-                        {!jaCorrigida && (
-                          <div style={correcaoRow}>
-                            {/* Input de XP parcial */}
-                            <div style={xpInputRow}>
-                              <label style={xpLabel}>XP a conceder:</label>
-                              <input
-                                type="number"
-                                min="0"
-                                max={xpMax}
-                                value={xpAtual}
-                                onChange={e => setXpCustom(prev => ({ ...prev, [resp.id]: e.target.value }))}
-                                style={xpInput}
-                                disabled={isSaving}
-                              />
-                              <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>
-                                de {xpMax}
-                              </span>
-                            </div>
-
-                            {/* Botões correto/errado */}
-                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                              <button
-                                onClick={() => handleGrade(resp, true)}
-                                disabled={isSaving}
-                                style={{ ...btnCerto, opacity: isSaving ? 0.6 : 1 }}
-                              >
-                                {isSaving ? "..." : "Correto"}
-                              </button>
-                              <button
-                                onClick={() => handleGrade(resp, false)}
-                                disabled={isSaving}
-                                style={{ ...btnErrado, opacity: isSaving ? 0.6 : 1 }}
-                              >
-                                {isSaving ? "..." : "✗ Errado"}
-                              </button>
-                            </div>
+                        {/* XP parcial - só aparece se marcado como correto e não enviado */}
+                        {!enviado && local.isCorrect === true && (
+                          <div style={xpInputRow}>
+                            <label style={xpLabel}>XP a conceder:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max={xpMax}
+                              value={local.xp}
+                              onChange={e => setXpLocal(resp.id, e.target.value)}
+                              style={xpInput}
+                            />
+                            <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>
+                              de {xpMax}
+                            </span>
                           </div>
                         )}
 
-                        {/* Data/hora da resposta */}
+                        {/* Data da resposta */}
                         {resp.answeredAt?.toDate && (
                           <p style={{ fontSize: "11px", color: "var(--texto-muito-suave)", marginTop: "8px", textAlign: "right" }}>
                             Respondido em {resp.answeredAt.toDate().toLocaleString("pt-BR", {
@@ -282,6 +318,29 @@ export default function CorrectOpenAnswers() {
           );
         })
       )}
+
+      {/* Botão de confirmar - fixo no rodapé */}
+      {!enviado && (
+        <div style={rodape}>
+          <div style={{ fontSize: "14px", color: todasMarcadas ? "var(--cor-primaria)" : "var(--texto-suave)" }}>
+            {todasMarcadas
+              ? "Tudo marcado! Revise e confirme quando estiver pronto."
+              : `Faltam ${totalRespostas - totalCorrigidas} resposta${totalRespostas - totalCorrigidas !== 1 ? "s" : ""} para marcar`
+            }
+          </div>
+          <button
+            onClick={handleConfirmar}
+            disabled={enviando || !todasMarcadas}
+            style={{
+              ...btnConfirmar,
+              opacity: (!todasMarcadas || enviando) ? 0.5 : 1,
+              cursor: (!todasMarcadas || enviando) ? "default" : "pointer",
+            }}
+          >
+            {enviando ? "Enviando..." : "Confirmar e enviar XP"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -289,7 +348,7 @@ export default function CorrectOpenAnswers() {
 /* Estilos */
 const container = {
   minHeight: "100vh", background: "transparent",
-  padding: "30px", maxWidth: "800px", margin: "0 auto",
+  padding: "30px 30px 100px", maxWidth: "800px", margin: "0 auto",
 };
 const header = {
   display: "flex", justifyContent: "space-between", alignItems: "flex-start",
@@ -298,8 +357,7 @@ const header = {
 const progressBox = {
   display: "flex", flexDirection: "column", alignItems: "center",
   background: "var(--bg-card)", borderRadius: "10px",
-  padding: "12px 20px", boxShadow: "var(--sombra-card)",
-  border: "1px solid var(--borda)",
+  padding: "12px 20px", boxShadow: "var(--sombra-card)", border: "1px solid var(--borda)",
 };
 const progressNum = {
   fontSize: "24px", fontWeight: "bold",
@@ -311,6 +369,12 @@ const successBanner = {
   borderRadius: "10px", padding: "14px 20px", marginBottom: "20px",
   fontWeight: "bold", fontSize: "14px", border: "1px solid var(--cor-primaria-borda)",
 };
+const infoBanner = {
+  background: "var(--bg-card)", borderRadius: "10px",
+  padding: "12px 16px", marginBottom: "20px",
+  fontSize: "13px", color: "var(--texto-suave)", lineHeight: 1.6,
+  border: "1px solid var(--borda)",
+};
 const card = {
   background: "var(--bg-card)", borderRadius: "12px",
   padding: "20px", marginBottom: "20px",
@@ -320,7 +384,7 @@ const questaoHeader = {
   display: "flex", justifyContent: "space-between",
   alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px",
 };
-const questaoNum = {
+const questaoNumStyle = {
   fontSize: "12px", fontWeight: "bold", color: "var(--texto-muito-suave)",
   textTransform: "uppercase", letterSpacing: "0.5px",
 };
@@ -366,13 +430,9 @@ const respostaTextoBox = {
   background: "var(--bg-card)", borderRadius: "8px",
   padding: "10px 14px", border: "1px solid var(--borda)",
 };
-const correcaoRow = {
-  display: "flex", alignItems: "center", justifyContent: "space-between",
-  marginTop: "12px", flexWrap: "wrap", gap: "10px",
-  paddingTop: "12px", borderTop: "1px solid var(--borda)",
-};
 const xpInputRow = {
   display: "flex", alignItems: "center", gap: "8px",
+  marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--borda)",
 };
 const xpLabel = {
   fontSize: "13px", fontWeight: "600", color: "var(--texto-suave)", whiteSpace: "nowrap",
@@ -384,18 +444,27 @@ const xpInput = {
   textAlign: "center", boxSizing: "border-box", fontFamily: "inherit",
 };
 const btnCerto = {
-  padding: "7px 14px", borderRadius: "8px", border: "none",
+  padding: "7px 14px", borderRadius: "8px", border: "2px solid var(--cor-primaria)",
   background: "var(--cor-primaria)", color: "#fff",
   fontWeight: "bold", fontSize: "13px", cursor: "pointer",
+  transition: "opacity 0.15s",
 };
 const btnErrado = {
-  padding: "7px 14px", borderRadius: "8px", border: "none",
+  padding: "7px 14px", borderRadius: "8px", border: "2px solid var(--cor-perigo)",
   background: "var(--cor-perigo)", color: "#fff",
   fontWeight: "bold", fontSize: "13px", cursor: "pointer",
+  transition: "opacity 0.15s",
 };
-const btnAlterar = {
-  padding: "6px 12px", borderRadius: "8px",
-  border: "1px solid var(--borda)", background: "var(--bg-card)",
-  color: "var(--texto-suave)", fontSize: "12px", cursor: "pointer",
-  fontFamily: "inherit",
+const rodape = {
+  position: "fixed", bottom: 0, left: 0, right: 0,
+  background: "var(--bg-card)", padding: "14px 24px",
+  display: "flex", justifyContent: "space-between", alignItems: "center",
+  boxShadow: "0 -2px 12px var(--sombra)", borderTop: "1px solid var(--borda)",
+  gap: "16px", flexWrap: "wrap",
+};
+const btnConfirmar = {
+  padding: "12px 28px", borderRadius: "8px", border: "none",
+  background: "var(--cor-primaria)", color: "#fff",
+  fontWeight: "bold", fontSize: "15px", fontFamily: "inherit",
+  transition: "opacity 0.2s",
 };

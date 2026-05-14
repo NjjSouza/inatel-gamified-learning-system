@@ -295,9 +295,19 @@ export default function ClassPageProfessor() {
         ) : (
           sessoesAtivas.map(s => {
             const players     = playersBySession[s.id] || [];
-            const respondidos = respondidosPorSessao[s.id] || 0;
+            const quiz        = quizzes.find(q => q.id === s.quizId);
             return (
               <div key={s.id} style={sessionCard}>
+                {/* Cabeçalho: nome do quiz + badge se tiver aberta */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                  <span style={{ fontWeight: "700", fontSize: "15px", color: "var(--texto)" }}>
+                    {quiz?.nome || "Quiz"}
+                  </span>
+                  {quizTemAberta[s.quizId] && (
+                    <span style={badgeAberta}>questões abertas</span>
+                  )}
+                </div>
+
                 {s.status === "waiting" && (
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                     <div style={{ textAlign: "left" }}>
@@ -356,13 +366,13 @@ export default function ClassPageProfessor() {
                             day: "2-digit", month: "2-digit", year: "numeric",
                             hour: "2-digit", minute: "2-digit",
                           })
-                        : "—"}
-                      {s.classeSemestre ? ` · ${s.classeSemestre}` : ""}
+                        : "-"}
+                      {s.classeSemestre ? ` - ${s.classeSemestre}` : ""}
                     </p>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <span style={percentualBadge(s.percentualGeral)}>
-                      {s.percentualGeral ?? "—"}% de acerto
+                      {s.percentualGeral ?? "-"}% de acerto
                     </span>
                     <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--texto-muito-suave)" }}>
                       {isExpanded ? "▲ ocultar" : "▼ detalhes"}
@@ -387,7 +397,7 @@ export default function ClassPageProfessor() {
                             fontSize: "12px", fontWeight: "bold",
                             color: diasRestantes <= 3 ? "var(--cor-perigo)" : "var(--cor-aviso)",
                           }}>
-                            ⚠ Expira em {diasRestantes} dia{diasRestantes !== 1 ? "s" : ""} — corrija antes que os alunos percam o XP!
+                            ⚠ Expira em {diasRestantes} dia{diasRestantes !== 1 ? "s" : ""} - corrija antes que os alunos percam o XP!
                           </span>
                         );
                       })()}
@@ -477,7 +487,7 @@ export default function ClassPageProfessor() {
                             day: "2-digit", month: "2-digit", year: "numeric",
                             hour: "2-digit", minute: "2-digit",
                           })
-                        : "—"}
+                        : "-"}
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -532,7 +542,7 @@ export default function ClassPageProfessor() {
                                       fontSize: "12px", fontWeight: "bold",
                                       color: resp.isCorrect ? "var(--cor-primaria)" : "var(--cor-perigo)",
                                     }}>
-                                      {resp.isCorrect ? `Correto · +${resp.xp} XP` : "✗ Errado"}
+                                      {resp.isCorrect ? `Correto - +${resp.xp} XP` : "Errado"}
                                     </span>
                                   ) : (
                                     <span style={badgePendente}>aguardando correção</span>
@@ -588,7 +598,7 @@ export default function ClassPageProfessor() {
                 onChange={e => setOrdenacao(e.target.value)}
                 style={selectStyle}
               >
-                <option value="alfabetica">A → Z</option>
+                <option value="alfabetica">A - Z</option>
                 <option value="ranking">Ranking (XP)</option>
               </select>
             </div>
@@ -632,7 +642,7 @@ export default function ClassPageProfessor() {
                         {i + 1}º
                       </td>
                     )}
-                    <td style={tdStyle}>{e.nome || "—"}</td>
+                    <td style={tdStyle}>{e.nome || "-"}</td>
                     <td style={{ ...tdStyle, fontSize: "13px", color: "var(--texto-suave)" }}>{e.email}</td>
                     <td style={tdStyle}>
                       {nivel ? (
@@ -641,14 +651,14 @@ export default function ClassPageProfessor() {
                           <span style={{ fontSize: "12px", color: "var(--texto-suave)" }}>{nivel.label}</span>
                         </span>
                       ) : (
-                        <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>—</span>
+                        <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>-</span>
                       )}
                     </td>
                     <td style={tdStyle}>
                       {xp !== null ? (
                         <span style={xpBadge}>{xp} XP</span>
                       ) : (
-                        <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>—</span>
+                        <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>-</span>
                       )}
                     </td>
                     <td style={tdStyle}>

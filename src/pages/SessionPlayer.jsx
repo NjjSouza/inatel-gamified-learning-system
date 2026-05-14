@@ -178,7 +178,7 @@ export default function SessionPlayer() {
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay
-            src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
+            src="https://lottie.host/e43f0777-f3f2-41f3-b66c-0ba87a9a1e60/Nt0MvUuGdE.lottie"
             loop duration={3100} onFinish={() => setShowAnswerOverlay(false)}
           />
         )}
@@ -245,7 +245,7 @@ export default function SessionPlayer() {
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay
-            src="https://lottie.host/784769b9-c400-4757-ad4f-8641cbe40a1e/qUvwpO2pAd.lottie"
+            src="https://lottie.host/e43f0777-f3f2-41f3-b66c-0ba87a9a1e60/Nt0MvUuGdE.lottie"
             loop duration={3100} onFinish={() => setShowAnswerOverlay(false)}
           />
         )}

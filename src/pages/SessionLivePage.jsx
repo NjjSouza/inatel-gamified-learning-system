@@ -177,13 +177,13 @@ export default function SessionLivePage() {
 
   return (
     <div style={container}>
-      <BackButton />
       {/* Cabeçalho */}
       <div style={topBar}>
         <div>
           <p style={quizLabel}>{quizNome}</p>
           <p style={codigoLabel}>Código: <strong>{session.pin}</strong></p>
         </div>
+        <BackButton />
         <div style={progressInfo}>
           {totalQuestions > 0 && (
             <SessionTimer
