@@ -8,24 +8,9 @@ import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
 import TwemojiImg from "../components/TwemojiImg";
 import BackButton from "../components/BackButton";
+import { getNivel, NIVEIS } from "../utils/niveis";
 
-// Níveis
-const NIVEIS = [
-  { label: "Pedra",    codepoint: "1faa8", min: 0    },
-  { label: "Bronze",   codepoint: "1f949", min: 201  },
-  { label: "Prata",    codepoint: "1f948", min: 401  },
-  { label: "Ouro",     codepoint: "1f947", min: 601  },
-  { label: "Platina",  codepoint: "1f52e", min: 801  },
-  { label: "Diamante", codepoint: "1f48e", min: 1001 },
-];
-
-function getNivel(xp) {
-  let nivel = NIVEIS[0];
-  for (const n of NIVEIS) { if (xp >= n.min) nivel = n; }
-  return nivel;
-}
-
-// Timer ativo 
+// Timer ativo
 function SessionTimer({ sessionId }) {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -43,7 +28,6 @@ function SessionTimer({ sessionId }) {
   );
 }
 
-// Componente principal 
 export default function ClassPageProfessor() {
   const { courseId, classId } = useParams();
   const navigate = useNavigate();
@@ -73,8 +57,8 @@ export default function ClassPageProfessor() {
 
   // Histórico de respostas abertas
   const [expandedOpenSession, setExpandedOpenSession] = useState(null);
-  const [openAnswersCache, setOpenAnswersCache]         = useState({}); // { sessionId: [] }
-  const [nomesCache, setNomesCache]                     = useState({}); // { userId: nome }
+  const [openAnswersCache, setOpenAnswersCache]         = useState({});
+  const [nomesCache, setNomesCache]                     = useState({});
   const [loadingOpenAnswers, setLoadingOpenAnswers]     = useState(false);
 
   const sessoesAtivas     = sessions.filter(s => s.status !== "finished");
@@ -151,7 +135,6 @@ export default function ClassPageProfessor() {
     verificar();
   }, [sessions, quizTemAberta]);
 
-  // XP por aluno (para ranking)
   useEffect(() => {
     if (!enrollments.length) return;
     const fetchXp = async () => {
@@ -177,7 +160,7 @@ export default function ClassPageProfessor() {
       return;
     }
     setExpandedOpenSession(sessionId);
-    if (openAnswersCache[sessionId]) return; // já carregado
+    if (openAnswersCache[sessionId]) return;
 
     setLoadingOpenAnswers(true);
     try {
@@ -294,8 +277,8 @@ export default function ClassPageProfessor() {
           <p style={{ color: "var(--texto-suave)" }}>Nenhuma sessão ativa no momento.</p>
         ) : (
           sessoesAtivas.map(s => {
-            const players     = playersBySession[s.id] || [];
-            const quiz        = quizzes.find(q => q.id === s.quizId);
+            const players = playersBySession[s.id] || [];
+            const quiz    = quizzes.find(q => q.id === s.quizId);
             return (
               <div key={s.id} style={sessionCard}>
                 {/* Cabeçalho: nome do quiz + badge se tiver aberta */}
@@ -491,9 +474,7 @@ export default function ClassPageProfessor() {
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    {temPendente && (
-                      <span style={badgePendente}>pendente</span>
-                    )}
+                    {temPendente && <span style={badgePendente}>pendente</span>}
                     <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>
                       {isExpanded ? "▲ fechar" : "▼ ver respostas"}
                     </span>
@@ -514,15 +495,9 @@ export default function ClassPageProfessor() {
                           {/* Enunciado */}
                           <div style={questaoAbertaHeader}>
                             <span style={questaoNum}>Questão aberta {qi + 1}</span>
-                            {questao && (
-                              <span style={xpBadge}>
-                                ⚡ {questao.xp ?? 10} XP
-                              </span>
-                            )}
+                            {questao && <span style={xpBadge}>⚡ {questao.xp ?? 10} XP</span>}
                           </div>
-                          <p style={questaoTexto}>
-                            {questao?.pergunta || "Questão removida"}
-                          </p>
+                          <p style={questaoTexto}>{questao?.pergunta || "Questão removida"}</p>
 
                           {/* Respostas dos alunos */}
                           {respostas.map(resp => {
@@ -533,9 +508,7 @@ export default function ClassPageProfessor() {
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                     <span style={alunoAvatar}>{nome.charAt(0).toUpperCase()}</span>
-                                    <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--texto)" }}>
-                                      {nome}
-                                    </span>
+                                    <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--texto)" }}>{nome}</span>
                                   </div>
                                   {corrigida ? (
                                     <span style={{
@@ -569,10 +542,7 @@ export default function ClassPageProfessor() {
 
                     {/* Botão para ir para a correção, se houver pendentes */}
                     {temPendente && (
-                      <button
-                        onClick={() => navigate(`/professor/sessao/${s.id}/corrigir`)}
-                        style={{ ...buttonCorrigir, marginTop: "12px" }}
-                      >
+                      <button onClick={() => navigate(`/professor/sessao/${s.id}/corrigir`)} style={{ ...buttonCorrigir, marginTop: "12px" }}>
                         Ir para correção
                       </button>
                     )}
@@ -584,20 +554,14 @@ export default function ClassPageProfessor() {
         </div>
       )}
 
-      {/* Alunos matriculados com XP e ranking */}
+      {/* Alunos matriculados */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
           <h2 style={{ margin: 0 }}>Alunos Matriculados</h2>
           {enrollments.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <label style={{ fontSize: "13px", color: "var(--texto-suave)", whiteSpace: "nowrap" }}>
-                Ordenar por:
-              </label>
-              <select
-                value={ordenacao}
-                onChange={e => setOrdenacao(e.target.value)}
-                style={selectStyle}
-              >
+              <label style={{ fontSize: "13px", color: "var(--texto-suave)", whiteSpace: "nowrap" }}>Ordenar por:</label>
+              <select value={ordenacao} onChange={e => setOrdenacao(e.target.value)} style={selectStyle}>
                 <option value="alfabetica">A - Z</option>
                 <option value="ranking">Ranking (XP)</option>
               </select>
@@ -646,10 +610,14 @@ export default function ClassPageProfessor() {
                     <td style={{ ...tdStyle, fontSize: "13px", color: "var(--texto-suave)" }}>{e.email}</td>
                     <td style={tdStyle}>
                       {nivel ? (
-                        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-                          <TwemojiImg codepoint={nivel.codepoint} size={18} alt={nivel.label} />
-                          <span style={{ fontSize: "12px", color: "var(--texto-suave)" }}>{nivel.label}</span>
-                        </span>
+                        nivel.label === "-" ? (
+                          <span style={{ fontSize: "13px", color: "var(--texto-muito-suave)" }}>-</span>
+                        ) : (
+                          <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+                            <TwemojiImg codepoint={nivel.codepoint} size={18} alt={nivel.label} />
+                            <span style={{ fontSize: "12px", color: "var(--texto-suave)" }}>{nivel.label}</span>
+                          </span>
+                        )
                       ) : (
                         <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>-</span>
                       )}

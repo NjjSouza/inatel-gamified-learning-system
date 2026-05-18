@@ -9,6 +9,7 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import LottieOverlay from "../components/LottieOverlay";
 import RankingTable from "../components/RankingTable";
 import Spinner from "../components/Spinner";
+import BackButton from "../components/BackButton";
 import TwemojiImg from "../components/TwemojiImg";
 
 function shuffleArray(array) {
@@ -79,32 +80,46 @@ export default function SessionPlayer() {
     fetchPlayer();
   }, [sessionId, user]);
 
+  // Quando a sessão encerrar, busca os jogadores para montar o TOP 3
   useEffect(() => {
     if (session?.status !== "finished") return;
+
     const key = `overlay_shown_${sessionId}`;
     if (!sessionStorage.getItem(key)) {
       sessionStorage.setItem(key, "true");
       setShowFinishedOverlay(true);
     }
+
+    // Busca jogadores para o ranking final
+    const fetchFinalPlayers = async () => {
+      const q = query(
+        collection(db, "session_players"),
+        where("sessionId", "==", sessionId)
+      );
+      const snap = await getDocs(q);
+      const players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Ordena por score e mantém apenas TOP 3
+      const top3 = [...players]
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+        .slice(0, 3);
+      setFinalPlayers(top3);
+    };
+    fetchFinalPlayers();
   }, [session?.status]);
 
   // Proteção: salva resposta vazia se aluno sair durante questão aberta
-  // Evita erros no console e garante registro no BD
   useEffect(() => {
     const current = shuffledQuestions[session?.currentQuestionIndex];
     if (!current || current.tipo !== "aberta" || answered || !playerId) return;
 
     const salvarSeNecessario = () => {
-      // Só age se ainda não respondeu
       if (answered) return;
-      // Envia resposta em branco silenciosamente (navigator.sendBeacon não é suportado
-      // pelo Firestore SDK, então usamos uma flag para evitar duplo envio)
       submitOpenAnswer(
         playerId, sessionId, current.id,
         session.currentQuestionIndex,
         respostaAberta.trim() || "(sem resposta)",
         user?.uid, session?.classId
-      ).catch(() => {}); // ignora erros silenciosamente ao sair
+      ).catch(() => {});
     };
 
     const handleVisibility = () => {
@@ -154,13 +169,20 @@ export default function SessionPlayer() {
       {!showFinishedOverlay && (
         <div style={finishedCard}>
           <h2 style={{ color: "var(--texto)" }}>Sessão encerrada!</h2>
-          <p style={{ color: "var(--texto-suave)", marginBottom: "8px", fontSize: "14px" }}>
+          <p style={{ color: "var(--texto-suave)", marginBottom: "4px", fontSize: "14px" }}>
             Seus pontos foram registrados!
           </p>
           <p style={{ color: "var(--texto-muito-suave)", marginBottom: "20px", fontSize: "13px" }}>
             XPs de questões abertas são contabilizados após correção do professor.
           </p>
-          <RankingTable players={finalPlayers} highlightUserId={playerId} />
+
+          {/* TOP 3 - só os três primeiros colocados */}
+          {finalPlayers.length > 0 && (
+            <>
+              <p style={top3Label}>Ranking Top 3</p>
+              <RankingTable players={finalPlayers} highlightUserId={user?.uid} />
+            </>
+          )}
         </div>
       )}
     </div>
@@ -242,6 +264,7 @@ export default function SessionPlayer() {
 
   return (
     <div style={{ minHeight: "100vh", background: "transparent" }}>
+      <BackButton />
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay
@@ -314,6 +337,10 @@ const finishedCard = {
   boxShadow: "var(--sombra-card)", border: "1px solid var(--borda)",
   width: "90%", maxWidth: "500px",
   animation: "fadeInUp 0.5s ease",
+};
+const top3Label = {
+  fontSize: "16px", fontWeight: "bold", color: "var(--texto)",
+  marginBottom: "12px",
 };
 const card = {
   width: "100%", maxWidth: "600px", padding: "25px",

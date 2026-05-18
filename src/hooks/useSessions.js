@@ -6,7 +6,8 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useQuizzes } from "./useQuizzes";
 
-const SESSION_TTL_DAYS = 30;
+const SESSION_TTL_DAYS  = 30;
+const XP_PRESENCA       = 10; // XP fixo concedido só por entrar na sessão
 
 export function useSessions() {
   const { user } = useAuth();
@@ -44,17 +45,27 @@ export function useSessions() {
     return { id: docSnap.id, ...docSnap.data() };
   };
 
+  /**
+   * Entra na sessão e concede XP de presença (10 XP fixos).
+   * Idempotente: se o aluno já entrou, não cria duplicata nem concede XP novamente.
+   */
   const joinSession = async (sessionId) => {
     if (!user) return;
 
+    // Verifica se já entrou
     const q = query(
       collection(db, "session_players"),
       where("sessionId", "==", sessionId),
       where("userId", "==", user.uid)
     );
     const existing = await getDocs(q);
-    if (!existing.empty) return;
+    if (!existing.empty) return; // já estava na sessão, não faz nada
 
+    // Busca classId da sessão para registrar o XP na turma correta
+    const sessionSnap = await getDoc(doc(db, "sessions", sessionId));
+    const classId = sessionSnap.exists() ? sessionSnap.data().classId : null;
+
+    // Cria o jogador
     await addDoc(collection(db, "session_players"), {
       sessionId,
       userId: user.uid,
@@ -62,6 +73,34 @@ export function useSessions() {
       score: 0,
       answers: {},
     });
+
+    // Concede XP de presença
+    if (classId) {
+      await addDoc(collection(db, "xp"), {
+        userId: user.uid,
+        classId,
+        amount: XP_PRESENCA,
+        reason: "presence",
+        sessionId,
+        createdAt: new Date(),
+      });
+
+      // Registra também nas moedas (espelham o XP)
+      await addDoc(collection(db, "coins"), {
+        userId: user.uid,
+        classId,
+        amount: XP_PRESENCA,
+        reason: "presence",
+        sessionId,
+        createdAt: new Date(),
+      });
+
+      await setDoc(
+        doc(db, "coin_balance", `${user.uid}_${classId}`),
+        { userId: user.uid, classId, balance: increment(XP_PRESENCA), updatedAt: new Date() },
+        { merge: true }
+      );
+    }
   };
 
   const listenPlayers = (sessionId, callback) => {
@@ -196,7 +235,7 @@ export function useSessions() {
     });
   };
 
-  // Resposta de múltipla escolha - XP concedido na hora
+  // Resposta de múltipla escolha
   const submitAnswer = async (playerId, sessionId, questionId, questionIndex, answerIndex, isCorrect, userId, classId, xpAmount = 10) => {
     const xpGanho = isCorrect ? xpAmount : 0;
 
@@ -236,13 +275,13 @@ export function useSessions() {
     return isCorrect;
   };
 
-  // Resposta de questão aberta - salva o texto, sem XP imediato
+  // Resposta de questão aberta
   const submitOpenAnswer = async (playerId, sessionId, questionId, questionIndex, respostaTexto, userId, classId) => {
     await addDoc(collection(db, "session_answers"), {
       sessionId, questionId, userId, classId,
       respostaTexto,
       tipo: "aberta",
-      isCorrect: null, // correção pendente
+      isCorrect: null,
       xp: 0,
       answeredAt: new Date(),
     });
@@ -254,7 +293,7 @@ export function useSessions() {
     });
   };
 
-  // Correção manual de questão aberta pelo professor
+  // Correção manual de questão aberta
   const gradeOpenAnswer = async (answerId, isCorrect, userId, classId, sessionId, questionId, xpAmount = 10) => {
     const answerRef = doc(db, "session_answers", answerId);
     const xpGanho = isCorrect ? xpAmount : 0;

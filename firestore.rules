@@ -37,7 +37,7 @@ service cloud.firestore {
         resource.data.professorId == request.auth.uid;
     }
 
-    // Quizzes
+    // Quizzes e suas questões
     match /quizzes/{quizId} {
       allow read: if isAuthenticated();
       allow create: if isProfessor();
@@ -72,7 +72,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Classes (turmas)
+    // Turmas
     match /classes/{classId} {
       allow read: if isAuthenticated();
       allow create: if isProfessor();
@@ -81,7 +81,7 @@ service cloud.firestore {
     }
 
     // Matrículas
-    // Professor cria; aluno pode atualizar o próprio enrollment (vincular userId)
+    // Professor cria; aluno pode vincular seu próprio userId ao fazer o primeiro acesso
     match /enrollments/{enrollmentId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
@@ -92,7 +92,7 @@ service cloud.firestore {
         get(/databases/$(database)/documents/classes/$(resource.data.classId))
           .data.professorId == request.auth.uid
         ||
-        // Aluno pode vincular seu próprio userId (apenas se userId ainda é null)
+        // Aluno vincula seu userId quando ainda é null e o e-mail bate
         (resource.data.userId == null &&
          request.resource.data.userId == request.auth.uid &&
          resource.data.email == request.auth.token.email)
@@ -103,6 +103,7 @@ service cloud.firestore {
     }
 
     // Respostas de sessão
+    // Aluno cria a própria resposta; professor atualiza em lote na correção de questões abertas
     match /session_answers/{answerId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
@@ -113,6 +114,8 @@ service cloud.firestore {
     }
 
     // XP
+    // Aluno ganha XP pela própria resposta correta (múltipla escolha);
+    // professor cria entradas de XP em lote após corrigir questões abertas
     match /xp/{xpId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && (
@@ -130,7 +133,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Coin Balance
+    // Saldo de coins
     match /coin_balance/{balanceId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&

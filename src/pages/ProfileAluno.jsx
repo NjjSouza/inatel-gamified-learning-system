@@ -7,24 +7,15 @@ import { db } from "../services/firebase";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import TwemojiImg from "../components/TwemojiImg";
 import BackButton from "../components/BackButton";
+import { getNivel } from "../utils/niveis";
 
 const NIVEL_CODEPOINTS = {
   "Pedra":    "1faa8",
   "Bronze":   "1f949",
   "Prata":    "1f948",
   "Ouro":     "1f947",
-  "Platina":  "1f52e",
   "Diamante": "1f48e",
 };
-
-function getNivel(xp) {
-  if (xp <= 200)  return { label: "Pedra" };
-  if (xp <= 400)  return { label: "Bronze" };
-  if (xp <= 600)  return { label: "Prata" };
-  if (xp <= 800)  return { label: "Ouro" };
-  if (xp <= 1000) return { label: "Platina" };
-  return { label: "Diamante" };
-}
 
 export default function ProfileAluno() {
   const { user, logout } = useAuth();
@@ -57,9 +48,8 @@ export default function ProfileAluno() {
           where("classId", "==", classId)
         ));
         const xpTurma = xpSnap.docs.reduce((s, d) => s + (d.data().amount || 0), 0);
-        disciplinasMap[courseId].turmas.push({
-          classId, semestre, xp: xpTurma, nivel: getNivel(xpTurma),
-        });
+        const nivel = getNivel(xpTurma);
+        disciplinasMap[courseId].turmas.push({ classId, semestre, xp: xpTurma, nivel });
       }
       setDisciplinas(Object.values(disciplinasMap));
       setLoading(false);
@@ -101,18 +91,27 @@ export default function ProfileAluno() {
           disciplinas.map((disc) => (
             <div key={disc.id} style={discCard}>
               <strong style={{ fontSize: "15px", color: "var(--texto)" }}>{disc.nome}</strong>
-              {disc.turmas.map((t) => (
-                <div key={t.classId} style={turmaRow}>
-                  <span style={{ fontSize: "13px", color: "var(--texto-suave)" }}>{t.semestre}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <TwemojiImg codepoint={NIVEL_CODEPOINTS[t.nivel.label]} size={20} alt={t.nivel.label} />
-                    <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--texto-suave)" }}>
-                      {t.nivel.label}
-                    </span>
-                    <span style={xpBadge}>{t.xp} XP</span>
+              {disc.turmas.map((t) => {
+                const semNivel = t.nivel.label === "-";
+                return (
+                  <div key={t.classId} style={turmaRow}>
+                    <span style={{ fontSize: "13px", color: "var(--texto-suave)" }}>{t.semestre}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {!semNivel && t.nivel.codepoint && (
+                        <TwemojiImg
+                          codepoint={NIVEL_CODEPOINTS[t.nivel.label] || t.nivel.codepoint}
+                          size={20}
+                          alt={t.nivel.label}
+                        />
+                      )}
+                      <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--texto-suave)" }}>
+                        {semNivel ? "-" : t.nivel.label}
+                      </span>
+                      <span style={xpBadge}>{t.xp} XP</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))
         )}

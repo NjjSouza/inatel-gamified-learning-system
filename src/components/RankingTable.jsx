@@ -6,7 +6,6 @@ const NIVEL_CODEPOINTS = {
   "Bronze":   "1f949",
   "Prata":    "1f948",
   "Ouro":     "1f947",
-  "Platina":  "1f52e",
   "Diamante": "1f48e",
 };
 
@@ -51,7 +50,7 @@ export default function RankingTable({ players, highlightUserId, showNivel = fal
                   }
                 </td>
                 <td style={{ ...tdStyle, textAlign: "left" }}>{p.nome}</td>
-                {showNivel && p.nivel && (
+                {showNivel && p.nivel && p.nivel.label !== "-" && (
                   <td style={tdStyle}>
                     <TwemojiImg
                       codepoint={NIVEL_CODEPOINTS[p.nivel.label] || "1f947"}
@@ -59,6 +58,11 @@ export default function RankingTable({ players, highlightUserId, showNivel = fal
                       alt={p.nivel.label}
                     />
                     {" "}{p.nivel.label}
+                  </td>
+                )}
+                {showNivel && (!p.nivel || p.nivel.label === "-") && (
+                  <td style={tdStyle}>
+                    <span style={{ color: "var(--texto-muito-suave)", fontSize: "13px" }}>-</span>
                   </td>
                 )}
                 <td style={tdStyle}>{p.score ?? p.xp ?? 0}</td>

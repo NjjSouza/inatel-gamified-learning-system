@@ -9,27 +9,19 @@ import Spinner from "../components/Spinner";
 import BackButton from "../components/BackButton";
 import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
+import { getNivel, NIVEIS } from "../utils/niveis";
 
 const NIVEL_CODEPOINTS = {
   "Pedra":    "1faa8",
   "Bronze":   "1f949",
   "Prata":    "1f948",
   "Ouro":     "1f947",
-  "Platina":  "1f52e",
   "Diamante": "1f48e",
 };
 
-function getNivel(xp) {
-  if (xp <= 200)  return { label: "Pedra" };
-  if (xp <= 400)  return { label: "Bronze" };
-  if (xp <= 600)  return { label: "Prata" };
-  if (xp <= 800)  return { label: "Ouro" };
-  if (xp <= 1000) return { label: "Platina" };
-  return { label: "Diamante" };
-}
-
 // Descrição amigável da origem do XP
 function origemXp(entry) {
+  if (entry.reason === "presence")            return "Presença no quiz";
   if (entry.reason === "correct_answer")      return "Questão de múltipla escolha";
   if (entry.reason === "open_answer_graded")  return "Questão aberta (corrigida pelo professor)";
   return "Bônus";
@@ -49,7 +41,7 @@ export default function CoursePageAluno() {
     totalSessoes: 0, totalRespostas: 0, totalAcertos: 0, totalXP: 0,
   });
   const [ranking, setRanking]       = useState([]);
-  const [historicoXp, setHistoricoXp] = useState([]); // entradas de XP do aluno nesta disciplina
+  const [historicoXp, setHistoricoXp] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -108,7 +100,7 @@ export default function CoursePageAluno() {
           .sort((a, b) => {
             const ta = a.createdAt?.toDate?.() ?? new Date(0);
             const tb = b.createdAt?.toDate?.() ?? new Date(0);
-            return tb - ta; // mais recente primeiro
+            return tb - ta;
           });
         setHistoricoXp(historico);
 
@@ -186,11 +178,17 @@ export default function CoursePageAluno() {
         ) : (
           <>
             <div style={nivelBadge}>
-              <TwemojiImg
-                codepoint={NIVEL_CODEPOINTS[meuNivel.label]}
-                size={36} alt={meuNivel.label}
-              />
-              <span style={nivelLabel}>{meuNivel.label}</span>
+              {meuNivel.label !== "-" && meuNivel.codepoint ? (
+                <>
+                  <TwemojiImg
+                    codepoint={NIVEL_CODEPOINTS[meuNivel.label] || meuNivel.codepoint}
+                    size={36} alt={meuNivel.label}
+                  />
+                  <span style={nivelLabel}>{meuNivel.label}</span>
+                </>
+              ) : (
+                <span style={nivelLabel}>-</span>
+              )}
             </div>
             <div style={statsGrid}>
               <div style={statBox}>
