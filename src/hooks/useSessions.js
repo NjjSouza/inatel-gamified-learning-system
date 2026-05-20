@@ -7,7 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useQuizzes } from "./useQuizzes";
 
 const SESSION_TTL_DAYS  = 30;
-const XP_PRESENCA       = 10; // XP fixo concedido só por entrar na sessão
+const XP_PRESENCA       = 10; // XP e moedas fixos por entrar na sessão
 
 export function useSessions() {
   const { user } = useAuth();
@@ -46,8 +46,8 @@ export function useSessions() {
   };
 
   /**
-   * Entra na sessão e concede XP de presença (10 XP fixos).
-   * Idempotente: se o aluno já entrou, não cria duplicata nem concede XP novamente.
+   * Entra na sessão e concede XP + moedas de presença (sincronizados).
+   * Idempotente: se o aluno já entrou, não cria duplicata nem concede novamente.
    */
   const joinSession = async (sessionId) => {
     if (!user) return;
@@ -59,9 +59,8 @@ export function useSessions() {
       where("userId", "==", user.uid)
     );
     const existing = await getDocs(q);
-    if (!existing.empty) return; // já estava na sessão, não faz nada
+    if (!existing.empty) return;
 
-    // Busca classId da sessão para registrar o XP na turma correta
     const sessionSnap = await getDoc(doc(db, "sessions", sessionId));
     const classId = sessionSnap.exists() ? sessionSnap.data().classId : null;
 
@@ -74,8 +73,8 @@ export function useSessions() {
       answers: {},
     });
 
-    // Concede XP de presença
     if (classId) {
+      // XP de presença
       await addDoc(collection(db, "xp"), {
         userId: user.uid,
         classId,
@@ -85,7 +84,7 @@ export function useSessions() {
         createdAt: new Date(),
       });
 
-      // Registra também nas moedas (espelham o XP)
+      // Moedas de presença - mesmo valor do XP
       await addDoc(collection(db, "coins"), {
         userId: user.uid,
         classId,
@@ -95,9 +94,15 @@ export function useSessions() {
         createdAt: new Date(),
       });
 
+      // Saldo de moedas
       await setDoc(
         doc(db, "coin_balance", `${user.uid}_${classId}`),
-        { userId: user.uid, classId, balance: increment(XP_PRESENCA), updatedAt: new Date() },
+        {
+          userId: user.uid,
+          classId,
+          balance: increment(XP_PRESENCA),
+          updatedAt: new Date(),
+        },
         { merge: true }
       );
     }
@@ -168,7 +173,7 @@ export function useSessions() {
       collection(db, "session_answers"),
       where("sessionId", "==", sessionId)
     ));
-    // Inclui apenas respostas de questões fechadas (múltipla escolha) para o percentual
+    // Apenas respostas fechadas para o percentual geral
     const respostas = answersSnap.docs.map(d => d.data()).filter(r => r.tipo !== "aberta");
 
     const playersSnap = await getDocs(query(
@@ -189,8 +194,8 @@ export function useSessions() {
       totalMatriculados = enrollSnap.size;
     }
 
-    const total = respostas.length;
-    const acertos = respostas.filter(r => r.isCorrect).length;
+    const total    = respostas.length;
+    const acertos  = respostas.filter(r => r.isCorrect).length;
     const percentualGeral = total > 0 ? Math.round((acertos / total) * 100) : 0;
 
     const porQuestao = {};
@@ -235,8 +240,14 @@ export function useSessions() {
     });
   };
 
-  // Resposta de múltipla escolha
-  const submitAnswer = async (playerId, sessionId, questionId, questionIndex, answerIndex, isCorrect, userId, classId, xpAmount = 10) => {
+  /**
+   * Resposta de múltipla escolha.
+   * XP e moedas sempre com o mesmo valor (xpAmount se correto, 0 se errado).
+   */
+  const submitAnswer = async (
+    playerId, sessionId, questionId, questionIndex,
+    answerIndex, isCorrect, userId, classId, xpAmount = 10
+  ) => {
     const xpGanho = isCorrect ? xpAmount : 0;
 
     await addDoc(collection(db, "session_answers"), {
@@ -246,28 +257,36 @@ export function useSessions() {
       answeredAt: new Date(),
     });
 
+    // Atualiza score no placar ao vivo
     const playerRef = doc(db, "session_players", playerId);
     await updateDoc(playerRef, {
       [`answers.${questionIndex}`]: answerIndex,
-      score: isCorrect ? increment(xpGanho) : increment(0),
+      score: increment(xpGanho),
     });
 
     if (isCorrect && userId && classId) {
+      // XP
       await addDoc(collection(db, "xp"), {
         userId, classId, amount: xpGanho,
         reason: "correct_answer", sessionId, questionId,
         createdAt: new Date(),
       });
 
+      // Moedas - mesmo valor do XP
       await addDoc(collection(db, "coins"), {
-        userId, classId, amount: 0,
+        userId, classId, amount: xpGanho,
         reason: "correct_answer", sessionId, questionId,
         createdAt: new Date(),
       });
 
+      // Saldo de moedas
       await setDoc(
         doc(db, "coin_balance", `${userId}_${classId}`),
-        { userId, classId, balance: increment(0), updatedAt: new Date() },
+        {
+          userId, classId,
+          balance: increment(xpGanho),
+          updatedAt: new Date(),
+        },
         { merge: true }
       );
     }
@@ -275,8 +294,13 @@ export function useSessions() {
     return isCorrect;
   };
 
-  // Resposta de questão aberta
-  const submitOpenAnswer = async (playerId, sessionId, questionId, questionIndex, respostaTexto, userId, classId) => {
+  /**
+   * Resposta de questão aberta (sem XP/moedas ainda - aguarda correção do professor).
+   */
+  const submitOpenAnswer = async (
+    playerId, sessionId, questionId, questionIndex,
+    respostaTexto, userId, classId
+  ) => {
     await addDoc(collection(db, "session_answers"), {
       sessionId, questionId, userId, classId,
       respostaTexto,
@@ -286,17 +310,21 @@ export function useSessions() {
       answeredAt: new Date(),
     });
 
-    // Marca a questão como "respondida" no placar do jogador (sem score)
     const playerRef = doc(db, "session_players", playerId);
     await updateDoc(playerRef, {
       [`answers.${questionIndex}`]: "aberta_enviada",
     });
   };
 
-  // Correção manual de questão aberta
-  const gradeOpenAnswer = async (answerId, isCorrect, userId, classId, sessionId, questionId, xpAmount = 10) => {
+  /**
+   * Correção manual de uma questão aberta (chamada em lote por gradeOpenAnswersBatch).
+   * Concede XP + moedas sincronizados se correto.
+   */
+  const gradeOpenAnswer = async (
+    answerId, isCorrect, userId, classId, sessionId, questionId, xpAmount = 10
+  ) => {
     const answerRef = doc(db, "session_answers", answerId);
-    const xpGanho = isCorrect ? xpAmount : 0;
+    const xpGanho   = isCorrect ? xpAmount : 0;
 
     await updateDoc(answerRef, {
       isCorrect,
@@ -305,12 +333,43 @@ export function useSessions() {
     });
 
     if (isCorrect && userId && classId) {
+      // XP
       await addDoc(collection(db, "xp"), {
         userId, classId, amount: xpGanho,
         reason: "open_answer_graded", sessionId, questionId,
         createdAt: new Date(),
       });
+
+      // Moedas - mesmo valor do XP
+      await addDoc(collection(db, "coins"), {
+        userId, classId, amount: xpGanho,
+        reason: "open_answer_graded", sessionId, questionId,
+        createdAt: new Date(),
+      });
+
+      // Saldo de moedas
+      await setDoc(
+        doc(db, "coin_balance", `${userId}_${classId}`),
+        {
+          userId, classId,
+          balance: increment(xpGanho),
+          updatedAt: new Date(),
+        },
+        { merge: true }
+      );
     }
+  };
+
+  /**
+   * Corrige um lote de respostas abertas de uma sessão de uma vez.
+   * Usado pela página CorrectOpenAnswers para envio atômico.
+   */
+  const gradeOpenAnswersBatch = async (correcoes, sessionId) => {
+    await Promise.all(
+      correcoes.map(({ answerId, isCorrect, xpAmount, userId, classId, questionId }) =>
+        gradeOpenAnswer(answerId, isCorrect, userId, classId, sessionId, questionId, xpAmount)
+      )
+    );
   };
 
   // Busca respostas abertas de uma sessão para o professor corrigir
@@ -338,6 +397,7 @@ export function useSessions() {
     submitAnswer,
     submitOpenAnswer,
     gradeOpenAnswer,
+    gradeOpenAnswersBatch,
     getOpenAnswersForSession,
   };
 }

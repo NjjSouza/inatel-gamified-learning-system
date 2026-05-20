@@ -81,18 +81,15 @@ service cloud.firestore {
     }
 
     // Matrículas
-    // Professor cria; aluno pode vincular seu próprio userId ao fazer o primeiro acesso
     match /enrollments/{enrollmentId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
         get(/databases/$(database)/documents/classes/$(request.resource.data.classId))
           .data.professorId == request.auth.uid;
       allow update: if isAuthenticated() && (
-        // Professor dono da turma pode atualizar
         get(/databases/$(database)/documents/classes/$(resource.data.classId))
           .data.professorId == request.auth.uid
         ||
-        // Aluno vincula seu userId quando ainda é null e o e-mail bate
         (resource.data.userId == null &&
          request.resource.data.userId == request.auth.uid &&
          resource.data.email == request.auth.token.email)
@@ -103,7 +100,6 @@ service cloud.firestore {
     }
 
     // Respostas de sessão
-    // Aluno cria a própria resposta; professor atualiza em lote na correção de questões abertas
     match /session_answers/{answerId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
@@ -114,8 +110,6 @@ service cloud.firestore {
     }
 
     // XP
-    // Aluno ganha XP pela própria resposta correta (múltipla escolha);
-    // professor cria entradas de XP em lote após corrigir questões abertas
     match /xp/{xpId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && (
@@ -128,18 +122,24 @@ service cloud.firestore {
     // Coins
     match /coins/{coinId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        isProfessor()
+      );
       allow update, delete: if false;
     }
 
     // Saldo de coins
     match /coin_balance/{balanceId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() &&
-        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        isProfessor()
+      );
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isProfessor()
+      );
       allow delete: if false;
     }
   }
