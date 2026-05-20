@@ -27,6 +27,56 @@ function origemXp(entry) {
   return "Bônus";
 }
 
+/**
+ * Agrupa entradas do histórico de XP por sessão para múltipla escolha,
+ * mantendo presença e questões abertas como entradas individuais.
+ */
+function agruparHistoricoXp(entries) {
+  const resultado = [];
+  // sessionId → { amount, date, quizNome }  (acumulador temporário)
+  const multipla = {};
+
+  for (const e of entries) {
+    if (e.reason === "correct_answer" && e.sessionId) {
+      if (!multipla[e.sessionId]) {
+        multipla[e.sessionId] = {
+          id: `multipla_${e.sessionId}`,
+          reason: "correct_answer_sum",
+          sessionId: e.sessionId,
+          amount: 0,
+          acertos: 0,
+          createdAt: e.createdAt, // data da primeira entrada
+        };
+      }
+      multipla[e.sessionId].amount += e.amount || 0;
+      multipla[e.sessionId].acertos += 1;
+    } else {
+      resultado.push(e);
+    }
+  }
+
+  // Adiciona as somas de múltipla escolha
+  for (const v of Object.values(multipla)) {
+    resultado.push(v);
+  }
+
+  // Reordena por data decrescente
+  resultado.sort((a, b) => {
+    const ta = a.createdAt?.toDate?.() ?? new Date(0);
+    const tb = b.createdAt?.toDate?.() ?? new Date(0);
+    return tb - ta;
+  });
+
+  return resultado;
+}
+
+function origemAgrupado(entry) {
+  if (entry.reason === "presence")            return "Presença no quiz";
+  if (entry.reason === "correct_answer_sum")  return `Múltipla escolha - ${entry.acertos} acerto${entry.acertos !== 1 ? "s" : ""}`;
+  if (entry.reason === "open_answer_graded")  return "Questão aberta (corrigida pelo professor)";
+  return "Bônus";
+}
+
 export default function CoursePageAluno() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -34,14 +84,27 @@ export default function CoursePageAluno() {
   const { getCourseById } = useCourses();
   const { getEnrolledClassIds } = useClasses();
 
-  const [course, setCourse]     = useState(null);
+  const [course, setCourse]       = useState(null);
   const [professor, setProfessor] = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading]     = useState(true);
+
+  // Stats do aluno
   const [stats, setStats] = useState({
-    totalSessoes: 0, totalRespostas: 0, totalAcertos: 0, totalXP: 0,
+    totalSessoes: 0,
+    totalRespostas: 0,
+    totalAcertos: 0,
+    totalXP: 0,
   });
-  const [ranking, setRanking]       = useState([]);
-  const [historicoXp, setHistoricoXp] = useState([]);
+
+  // Stats comparativos (em relação à turma/professor)
+  const [comparativos, setComparativos] = useState({
+    xpDistribuido: 0,       // total de XP que o professor distribuiu para a turma
+    sessoesAplicadas: 0,    // total de sessões encerradas na turma
+    totalPossivel: 0,       // total de questões possíveis (presença em todas as sessões)
+  });
+
+  const [ranking, setRanking]           = useState([]);
+  const [historicoXp, setHistoricoXp]   = useState([]);  // agrupado
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,7 +118,7 @@ export default function CoursePageAluno() {
         if (profSnap.exists()) setProfessor(profSnap.data());
       }
 
-      // Turmas do aluno nessa disciplina
+      // Turmas do aluno nesta disciplina
       const enrolledClassIds = await getEnrolledClassIds(user.uid);
       const classesSnap = await getDocs(query(
         collection(db, "classes"), where("courseId", "==", courseId)
@@ -66,15 +129,40 @@ export default function CoursePageAluno() {
 
       if (classIds.length === 0) { setLoading(false); return; }
 
-      // Sessões
+      // Todas as sessões encerradas na turma
       const sessionsSnap = await getDocs(query(
         collection(db, "sessions"), where("courseId", "==", courseId)
       ));
-      const sessionIds = sessionsSnap.docs
+      const todasSessoes = sessionsSnap.docs
         .filter(d => classIds.includes(d.data().classId))
-        .map(d => d.id);
+        .map(d => ({ id: d.id, ...d.data() }));
+
+      const sessoesEncerradas = todasSessoes.filter(s => s.status === "finished");
+      const sessionIds        = todasSessoes.map(s => s.id);
+
+      // XP do aluno
+      const xpSnap = await getDocs(query(
+        collection(db, "xp"),
+        where("userId", "==", user.uid),
+        where("classId", "in", classIds)
+      ));
+      const totalXP = xpSnap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+
+      // Histórico bruto -> agrupado
+      const historicoBruto = xpSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const ta = a.createdAt?.toDate?.() ?? new Date(0);
+          const tb = b.createdAt?.toDate?.() ?? new Date(0);
+          return tb - ta;
+        });
+      setHistoricoXp(agruparHistoricoXp(historicoBruto));
 
       // Respostas do aluno
+      let sessoesParticipadas = 0;
+      let totalRespostas = 0;
+      let totalAcertos   = 0;
+
       if (sessionIds.length > 0) {
         const answersSnap = await getDocs(query(
           collection(db, "session_answers"), where("userId", "==", user.uid)
@@ -83,34 +171,44 @@ export default function CoursePageAluno() {
           .map(d => d.data())
           .filter(r => sessionIds.includes(r.sessionId));
 
-        const sessoesParticipadas = new Set(respostas.map(r => r.sessionId)).size;
-        const acertos = respostas.filter(r => r.isCorrect).length;
+        sessoesParticipadas = new Set(respostas.map(r => r.sessionId)).size;
+        totalRespostas      = respostas.length;
+        totalAcertos        = respostas.filter(r => r.isCorrect).length;
+      }
 
-        // XP do aluno nessa disciplina
-        const xpSnap = await getDocs(query(
-          collection(db, "xp"),
-          where("userId", "==", user.uid),
-          where("classId", "in", classIds)
-        ));
-        const totalXP = xpSnap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+      setStats({ totalSessoes: sessoesParticipadas, totalRespostas, totalAcertos, totalXP });
 
-        // Histórico de XP ordenado por data
-        const historico = xpSnap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => {
-            const ta = a.createdAt?.toDate?.() ?? new Date(0);
-            const tb = b.createdAt?.toDate?.() ?? new Date(0);
-            return tb - ta;
-          });
-        setHistoricoXp(historico);
+      // Comparativos: XP distribuído para a turma inteira 
+      // (soma de todo XP gerado para qualquer aluno nas turmas desta disciplina)
+      const todosXpSnap = await getDocs(query(
+        collection(db, "xp"), where("classId", "in", classIds)
+      ));
 
-        setStats({
-          totalSessoes: sessoesParticipadas,
-          totalRespostas: respostas.length,
-          totalAcertos: acertos,
-          totalXP,
+      // XP distribuído = máximo que um único aluno poderia ter ganho
+      // Calculamos somando o XP de cada sessão encerrada (presença + questões)
+      // Para isso, buscamos as questões de cada quiz aplicado
+      let xpPossivelTotal = 0;
+      let questoesPossivelTotal = 0;
+
+      for (const sessao of sessoesEncerradas) {
+        // XP de presença
+        xpPossivelTotal += 10;
+
+        // Busca questões do quiz
+        const questoesSnap = await getDocs(
+          collection(db, "quizzes", sessao.quizId, "questions")
+        );
+        questoesSnap.docs.forEach(d => {
+          xpPossivelTotal       += d.data().xp ?? 10;
+          questoesPossivelTotal += 1;
         });
       }
+
+      setComparativos({
+        xpDistribuido:   xpPossivelTotal,
+        sessoesAplicadas: sessoesEncerradas.length,
+        totalPossivel:   questoesPossivelTotal,
+      });
 
       // Ranking da turma
       const todosEnrollmentsSnap = await getDocs(query(
@@ -118,33 +216,27 @@ export default function CoursePageAluno() {
       ));
       const userIds = todosEnrollmentsSnap.docs.map(d => d.data().userId).filter(Boolean);
 
-      if (userIds.length === 0) { setLoading(false); return; }
+      if (userIds.length > 0) {
+        const xpPorUsuario = {};
+        todosXpSnap.docs.forEach(d => {
+          const { userId, amount } = d.data();
+          if (!userId) return;
+          xpPorUsuario[userId] = (xpPorUsuario[userId] || 0) + (amount || 0);
+        });
 
-      // XP de todos os alunos
-      const todosXpSnap = await getDocs(query(
-        collection(db, "xp"), where("classId", "in", classIds)
-      ));
+        const rankingComNomes = await Promise.all(
+          userIds.map(async uid => {
+            const userSnap = await getDoc(doc(db, "usuarios", uid));
+            const nome = userSnap.exists()
+              ? (userSnap.data().nome || userSnap.data().email) : "Aluno";
+            const xp = xpPorUsuario[uid] || 0;
+            return { id: uid, nome, xp, nivel: getNivel(xp) };
+          })
+        );
+        rankingComNomes.sort((a, b) => b.xp - a.xp);
+        setRanking(rankingComNomes);
+      }
 
-      // Agrupa XP por userId
-      const xpPorUsuario = {};
-      todosXpSnap.docs.forEach(d => {
-        const { userId, amount } = d.data();
-        if (!userId) return;
-        xpPorUsuario[userId] = (xpPorUsuario[userId] || 0) + (amount || 0);
-      });
-
-      // Busca nomes dos usuários
-      const rankingComNomes = await Promise.all(
-        userIds.map(async uid => {
-          const userSnap = await getDoc(doc(db, "usuarios", uid));
-          const nome = userSnap.exists()
-            ? (userSnap.data().nome || userSnap.data().email) : "Aluno";
-          const xp = xpPorUsuario[uid] || 0;
-          return { id: uid, nome, xp, nivel: getNivel(xp) };
-        })
-      );
-      rankingComNomes.sort((a, b) => b.xp - a.xp);
-      setRanking(rankingComNomes);
       setLoading(false);
     };
 
@@ -154,9 +246,17 @@ export default function CoursePageAluno() {
   if (loading) return <Spinner />;
   if (!course)  return <Spinner />;
 
-  const precisao  = stats.totalRespostas > 0
+  const precisao = stats.totalRespostas > 0
     ? Math.round((stats.totalAcertos / stats.totalRespostas) * 100) : 0;
-  const meuNivel  = getNivel(stats.totalXP);
+  const meuNivel = getNivel(stats.totalXP);
+
+  // Percentuais comparativos (evita divisão por zero)
+  const pctXP       = comparativos.xpDistribuido > 0
+    ? Math.round((stats.totalXP / comparativos.xpDistribuido) * 100) : 0;
+  const pctSessoes  = comparativos.sessoesAplicadas > 0
+    ? Math.round((stats.totalSessoes / comparativos.sessoesAplicadas) * 100) : 0;
+  const pctQuestoes = comparativos.totalPossivel > 0
+    ? Math.round((stats.totalAcertos / comparativos.totalPossivel) * 100) : 0;
 
   return (
     <div style={container}>
@@ -171,42 +271,65 @@ export default function CoursePageAluno() {
       {/* Desempenho */}
       <div style={card}>
         <h2>Meu Desempenho</h2>
-        {stats.totalRespostas === 0 ? (
+        {stats.totalRespostas === 0 && stats.totalXP === 0 ? (
           <p style={{ color: "var(--texto-suave)" }}>
             Você ainda não participou de nenhuma sessão nesta disciplina.
           </p>
         ) : (
           <>
-            <div style={nivelBadge}>
-              {meuNivel.label !== "-" && meuNivel.codepoint ? (
-                <>
-                  <TwemojiImg
-                    codepoint={NIVEL_CODEPOINTS[meuNivel.label] || meuNivel.codepoint}
-                    size={36} alt={meuNivel.label}
-                  />
-                  <span style={nivelLabel}>{meuNivel.label}</span>
-                </>
-              ) : (
-                <span style={nivelLabel}>-</span>
-              )}
-            </div>
+            {/* Nível */}
+            {meuNivel.label !== "-" && meuNivel.codepoint && (
+              <div style={nivelBadge}>
+                <TwemojiImg
+                  codepoint={NIVEL_CODEPOINTS[meuNivel.label] || meuNivel.codepoint}
+                  size={36} alt={meuNivel.label}
+                />
+                <span style={nivelLabel}>{meuNivel.label}</span>
+              </div>
+            )}
+
+            {/* Grade de stats comparativos */}
             <div style={statsGrid}>
-              <div style={statBox}>
-                <span style={statNumber}>{stats.totalXP}</span>
-                <span style={statLabel}>XP Total</span>
-              </div>
-              <div style={statBox}>
-                <span style={statNumber}>{stats.totalSessoes}</span>
-                <span style={statLabel}>Quizzes respondidos</span>
-              </div>
-              <div style={statBox}>
-                <span style={statNumber}>{stats.totalAcertos}</span>
-                <span style={statLabel}>Acertos</span>
-              </div>
-              <div style={statBox}>
-                <span style={statNumber}>{precisao}%</span>
-                <span style={statLabel}>Precisão</span>
-              </div>
+
+              {/* XP */}
+              <StatBox
+                valor={stats.totalXP}
+                comparativo={comparativos.xpDistribuido}
+                label="XP total"
+                subLabel={comparativos.xpDistribuido > 0
+                  ? `de ${comparativos.xpDistribuido} possíveis` : null}
+                pct={pctXP}
+              />
+
+              {/* Quizzes */}
+              <StatBox
+                valor={stats.totalSessoes}
+                comparativo={comparativos.sessoesAplicadas}
+                label="Quizzes participados"
+                subLabel={comparativos.sessoesAplicadas > 0
+                  ? `de ${comparativos.sessoesAplicadas} aplicados` : null}
+                pct={pctSessoes}
+              />
+
+              {/* Acertos */}
+              <StatBox
+                valor={stats.totalAcertos}
+                comparativo={comparativos.totalPossivel}
+                label="Acertos"
+                subLabel={comparativos.totalPossivel > 0
+                  ? `de ${comparativos.totalPossivel} questões possíveis` : null}
+                pct={pctQuestoes}
+              />
+
+              {/* Precisão */}
+              <StatBox
+                valor={`${precisao}%`}
+                comparativo={null}
+                label="Percentual de acertos"
+                subLabel="nas questões respondidas"
+                pct={precisao}
+                isPercent
+              />
             </div>
           </>
         )}
@@ -239,10 +362,12 @@ export default function CoursePageAluno() {
                       : "-"}
                   </td>
                   <td style={{ ...tdStyle, textAlign: "left", fontSize: "13px" }}>
-                    {origemXp(entry)}
+                    {origemAgrupado(entry)}
                   </td>
                   <td style={tdStyle}>
-                    <span style={xpBadge}>+{entry.amount} XP</span>
+                    <span style={entry.amount > 0 ? xpBadge : xpBadgeZero}>
+                      {entry.amount > 0 ? `+${entry.amount} XP` : "0 XP"}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -267,6 +392,31 @@ export default function CoursePageAluno() {
   );
 }
 
+// Componente StatBox
+function StatBox({ valor, comparativo, label, subLabel, pct, isPercent }) {
+  const cor = pct >= 70 ? "var(--cor-primaria)"
+            : pct >= 40 ? "var(--cor-alerta)"
+            : pct > 0   ? "var(--cor-perigo)"
+            : "var(--texto-muito-suave)";
+
+  return (
+    <div style={statBox}>
+      <span style={{ ...statNumber, color: cor }}>{valor}</span>
+      <span style={statLabel}>{label}</span>
+      {subLabel && (
+        <span style={statSub}>{subLabel}</span>
+      )}
+      {/* Barra de progresso comparativa */}
+      {(comparativo !== null || isPercent) && (
+        <div style={statBarFundo}>
+          <div style={{ ...statBarPreenchida, width: `${Math.min(pct, 100)}%`, background: cor }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Estilos
 const container = { minHeight: "100vh", background: "transparent", padding: "30px" };
 const header    = { textAlign: "center", marginBottom: "30px" };
 const card = {
@@ -277,17 +427,25 @@ const card = {
 };
 const statsGrid = {
   display: "grid", gridTemplateColumns: "1fr 1fr",
-  gap: "15px", marginTop: "15px",
+  gap: "12px", marginTop: "16px",
 };
 const statBox = {
-  background: "var(--bg-input)", borderRadius: "10px", padding: "20px 10px",
-  display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
+  background: "var(--bg-input)", borderRadius: "10px", padding: "16px 10px 14px",
+  display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
 };
-const statNumber = { fontSize: "28px", fontWeight: "bold", color: "var(--cor-primaria)" };
-const statLabel  = { fontSize: "13px", color: "var(--texto-suave)" };
+const statNumber = { fontSize: "26px", fontWeight: "bold" };
+const statLabel  = { fontSize: "12px", color: "var(--texto-suave)", textAlign: "center" };
+const statSub    = { fontSize: "11px", color: "var(--texto-muito-suave)", textAlign: "center" };
+const statBarFundo = {
+  width: "80%", height: "5px", background: "var(--borda)",
+  borderRadius: "4px", overflow: "hidden", marginTop: "6px",
+};
+const statBarPreenchida = {
+  height: "100%", borderRadius: "4px", transition: "width 0.5s ease",
+};
 const nivelBadge = {
   display: "flex", alignItems: "center", justifyContent: "center",
-  gap: "10px", marginBottom: "15px",
+  gap: "10px", marginBottom: "8px",
 };
 const nivelLabel = { fontSize: "20px", fontWeight: "bold", color: "var(--texto-suave)" };
 const thStyle = {
@@ -301,4 +459,9 @@ const tdStyle = {
 const xpBadge = {
   background: "var(--cor-primaria-claro)", color: "var(--cor-primaria-texto)",
   fontWeight: "bold", fontSize: "12px", padding: "3px 8px", borderRadius: "10px",
+};
+const xpBadgeZero = {
+  background: "var(--bg-hover)", color: "var(--texto-muito-suave)",
+  fontWeight: "bold", fontSize: "12px", padding: "3px 8px", borderRadius: "10px",
+  border: "1px solid var(--borda)",
 };
