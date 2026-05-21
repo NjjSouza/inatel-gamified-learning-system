@@ -42,7 +42,7 @@ export default function ClassPageProfessor() {
   const [sessions, setSessions]     = useState([]);
   const [quizzes, setQuizzes]       = useState([]);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
-  const [questionsCount, setQuestionsCount]   = useState({});
+  const [questionsCount, setQuestionsCount]     = useState({});
   const [playersBySession, setPlayersBySession] = useState({});
   const [respondidosPorSessao, setRespondidosPorSessao] = useState({});
   const [enrollments, setEnrollments] = useState([]);
@@ -52,14 +52,8 @@ export default function ClassPageProfessor() {
   const [pendentePorSessao, setPendentePorSessao] = useState({});
 
   // Ranking
-  const [xpPorAluno, setXpPorAluno]   = useState({});  // { userId: number }
-  const [ordenacao, setOrdenacao]     = useState("alfabetica"); // "alfabetica" | "ranking"
-
-  // Histórico de respostas abertas
-  const [expandedOpenSession, setExpandedOpenSession] = useState(null);
-  const [openAnswersCache, setOpenAnswersCache]         = useState({});
-  const [nomesCache, setNomesCache]                     = useState({});
-  const [loadingOpenAnswers, setLoadingOpenAnswers]     = useState(false);
+  const [xpPorAluno, setXpPorAluno]   = useState({});
+  const [ordenacao, setOrdenacao]     = useState("alfabetica");
 
   const sessoesAtivas     = sessions.filter(s => s.status !== "finished");
   const historico         = sessions.filter(s => s.status === "finished");
@@ -119,7 +113,7 @@ export default function ClassPageProfessor() {
     setRespondidosPorSessao(novoRespondidos);
   }, [sessions, playersBySession]);
 
-  // Verifica se ainda há respostas abertas pendentes em cada sessão do histórico
+  // Verifica pendências de respostas abertas em sessões encerradas
   useEffect(() => {
     const sessoesConcluidas = sessions.filter(s => s.status === "finished");
     if (!sessoesConcluidas.length) return;
@@ -153,49 +147,6 @@ export default function ClassPageProfessor() {
     fetchXp();
   }, [enrollments, classId]);
 
-  // Abrir histórico de respostas abertas
-  const handleExpandOpenSession = async (sessionId) => {
-    if (expandedOpenSession === sessionId) {
-      setExpandedOpenSession(null);
-      return;
-    }
-    setExpandedOpenSession(sessionId);
-    if (openAnswersCache[sessionId]) return;
-
-    setLoadingOpenAnswers(true);
-    try {
-      const respostas = await getOpenAnswersForSession(sessionId);
-
-      // Busca questões do quiz para exibir o enunciado
-      const sessao  = sessions.find(s => s.id === sessionId);
-      const questoes = sessao ? await getQuestions(sessao.quizId) : [];
-      const questoesMap = {};
-      questoes.forEach(q => { questoesMap[q.id] = q; });
-
-      // Busca nomes dos alunos
-      const userIds = [...new Set(respostas.map(r => r.userId).filter(Boolean))];
-      const novosNomes = { ...nomesCache };
-      await Promise.all(userIds.map(async uid => {
-        if (novosNomes[uid]) return;
-        const snap = await getDoc(doc(db, "usuarios", uid));
-        novosNomes[uid] = snap.exists() ? (snap.data().nome || snap.data().email) : uid;
-      }));
-      setNomesCache(novosNomes);
-
-      // Agrupa por questão
-      const porQuestao = {};
-      respostas.forEach(r => {
-        const key = r.questionId;
-        if (!porQuestao[key]) porQuestao[key] = { questao: questoesMap[key], respostas: [] };
-        porQuestao[key].respostas.push(r);
-      });
-
-      setOpenAnswersCache(prev => ({ ...prev, [sessionId]: { porQuestao, questoes } }));
-    } finally {
-      setLoadingOpenAnswers(false);
-    }
-  };
-
   // Handlers
   const handleCreateSession = async () => {
     if (!selectedQuiz) return alert("Selecione um quiz!");
@@ -217,9 +168,7 @@ export default function ClassPageProfessor() {
   // Alunos ordenados
   const alunosOrdenados = [...enrollments].sort((a, b) => {
     if (ordenacao === "ranking") {
-      const xpA = xpPorAluno[a.userId] || 0;
-      const xpB = xpPorAluno[b.userId] || 0;
-      return xpB - xpA;
+      return (xpPorAluno[b.userId] || 0) - (xpPorAluno[a.userId] || 0);
     }
     return (a.nome || a.email).localeCompare(b.nome || b.email, "pt-BR");
   });
@@ -281,7 +230,6 @@ export default function ClassPageProfessor() {
             const quiz    = quizzes.find(q => q.id === s.quizId);
             return (
               <div key={s.id} style={sessionCard}>
-                {/* Cabeçalho: nome do quiz + badge se tiver aberta */}
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
                   <span style={{ fontWeight: "700", fontSize: "15px", color: "var(--texto)" }}>
                     {quiz?.nome || "Quiz"}
@@ -302,10 +250,16 @@ export default function ClassPageProfessor() {
                       </p>
                     </div>
                     <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
-                      <button onClick={() => { navigator.clipboard.writeText(s.pin); alert("Código copiado!"); }} style={buttonSecondary}>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(s.pin); alert("Código copiado!"); }}
+                        style={buttonSecondary}
+                      >
                         Copiar código
                       </button>
-                      <button onClick={async () => { await startSession(s.id); navigate(`/professor/sessao/${s.id}`); }} style={buttonPrimary}>
+                      <button
+                        onClick={async () => { await startSession(s.id); navigate(`/professor/sessao/${s.id}`); }}
+                        style={buttonPrimary}
+                      >
                         Iniciar
                       </button>
                     </div>
@@ -330,13 +284,13 @@ export default function ClassPageProfessor() {
         <div style={card}>
           <h2>Histórico de Sessões</h2>
           {historicoOrdenado.map(s => {
-            const quiz        = quizzes.find(q => q.id === s.quizId);
-            const isExpanded  = expandedSession === s.id;
-            const presentes   = s.totalPresentes ?? null;
+            const quiz         = quizzes.find(q => q.id === s.quizId);
+            const isExpanded   = expandedSession === s.id;
+            const presentes    = s.totalPresentes ?? null;
             const matriculados = s.totalMatriculados ?? null;
-            const presencaPct = presentes != null && matriculados > 0
+            const presencaPct  = presentes != null && matriculados > 0
               ? Math.round((presentes / matriculados) * 100) : null;
-            const temPendente = pendentePorSessao[s.id];
+            const temPendente  = pendentePorSessao[s.id];
 
             return (
               <div key={s.id} style={sessionCard}>
@@ -363,7 +317,7 @@ export default function ClassPageProfessor() {
                   </div>
                 </button>
 
-                {/* Botão de correção de questões abertas */}
+                {/* Correção pendente */}
                 {temPendente && (
                   <div style={corrigirRow}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -385,8 +339,28 @@ export default function ClassPageProfessor() {
                         );
                       })()}
                     </div>
-                    <button onClick={() => navigate(`/professor/sessao/${s.id}/corrigir`)} style={buttonCorrigir}>
+                    <button
+                      onClick={() => navigate(`/professor/sessao/${s.id}/corrigir`)}
+                      style={buttonCorrigir}
+                    >
                       Corrigir respostas
+                    </button>
+                  </div>
+                )}
+
+                {/* Botão ver respostas - só quando já corrigido */}
+                {quizTemAberta[s.quizId] && !temPendente && (
+                  <div style={verRespostasRow}>
+                    <span style={{ fontSize: "13px", color: "var(--texto-suave)" }}>
+                      Questões abertas corrigidas
+                    </span>
+                    <button
+                      onClick={() =>
+                        navigate(`/professor/curso/${courseId}/turma/${classId}/respostas-abertas/${s.id}`)
+                      }
+                      style={buttonVerRespostas}
+                    >
+                      Ver respostas
                     </button>
                   </div>
                 )}
@@ -450,18 +424,16 @@ export default function ClassPageProfessor() {
         <div style={card}>
           <h2>Respostas de Questões Abertas</h2>
           <p style={{ fontSize: "13px", color: "var(--texto-suave)", marginBottom: "16px" }}>
-            Expanda uma sessão para ver as respostas e correções dos alunos.
+            Acesse as respostas e correções dos alunos por sessão.
           </p>
 
           {sessoesComAberta.map(s => {
-            const quiz       = quizzes.find(q => q.id === s.quizId);
-            const isExpanded = expandedOpenSession === s.id;
-            const cache      = openAnswersCache[s.id];
+            const quiz        = quizzes.find(q => q.id === s.quizId);
             const temPendente = pendentePorSessao[s.id];
 
             return (
               <div key={s.id} style={sessionCard}>
-                <button onClick={() => handleExpandOpenSession(s.id)} style={historicoButton}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                   <div style={{ textAlign: "left" }}>
                     <strong style={{ color: "var(--texto)" }}>{quiz?.nome || "Quiz"}</strong>
                     <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--texto-suave)" }}>
@@ -473,79 +445,31 @@ export default function ClassPageProfessor() {
                         : "-"}
                     </p>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    {temPendente && <span style={badgePendente}>pendente</span>}
-                    <span style={{ fontSize: "12px", color: "var(--texto-muito-suave)" }}>
-                      {isExpanded ? "▲ fechar" : "▼ ver respostas"}
-                    </span>
-                  </div>
-                </button>
-
-                {isExpanded && (
-                  <div style={{ marginTop: "16px" }}>
-                    {loadingOpenAnswers && !cache ? (
-                      <p style={{ color: "var(--texto-suave)", fontSize: "13px" }}>Carregando...</p>
-                    ) : !cache || Object.keys(cache.porQuestao).length === 0 ? (
-                      <p style={{ color: "var(--texto-suave)", fontSize: "13px" }}>
-                        Nenhuma resposta registrada nesta sessão.
-                      </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                    {temPendente ? (
+                      <span style={badgePendente}>pendente</span>
                     ) : (
-                      Object.entries(cache.porQuestao).map(([qId, { questao, respostas }], qi) => (
-                        <div key={qId} style={questaoAbertaBloco}>
-                          {/* Enunciado */}
-                          <div style={questaoAbertaHeader}>
-                            <span style={questaoNum}>Questão aberta {qi + 1}</span>
-                            {questao && <span style={xpBadge}>⚡ {questao.xp ?? 10} XP</span>}
-                          </div>
-                          <p style={questaoTexto}>{questao?.pergunta || "Questão removida"}</p>
-
-                          {/* Respostas dos alunos */}
-                          {respostas.map(resp => {
-                            const nome = nomesCache[resp.userId] || "Aluno";
-                            const corrigida = resp.isCorrect !== null && resp.isCorrect !== undefined;
-                            return (
-                              <div key={resp.id} style={respostaBloco(resp.isCorrect)}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                    <span style={alunoAvatar}>{nome.charAt(0).toUpperCase()}</span>
-                                    <span style={{ fontWeight: "bold", fontSize: "14px", color: "var(--texto)" }}>{nome}</span>
-                                  </div>
-                                  {corrigida ? (
-                                    <span style={{
-                                      fontSize: "12px", fontWeight: "bold",
-                                      color: resp.isCorrect ? "var(--cor-primaria)" : "var(--cor-perigo)",
-                                    }}>
-                                      {resp.isCorrect ? `Correto - +${resp.xp} XP` : "Errado"}
-                                    </span>
-                                  ) : (
-                                    <span style={badgePendente}>aguardando correção</span>
-                                  )}
-                                </div>
-                                <div style={respostaTextoBox}>
-                                  <p style={{ margin: 0, fontSize: "14px", color: "var(--texto)", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                                    {resp.respostaTexto}
-                                  </p>
-                                </div>
-                                {resp.answeredAt?.toDate && (
-                                  <p style={{ fontSize: "11px", color: "var(--texto-muito-suave)", marginTop: "6px", textAlign: "right" }}>
-                                    Respondido em {resp.answeredAt.toDate().toLocaleString("pt-BR", {
-                                      day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
-                                    })}
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))
-                    )}
-
-                    {/* Botão para ir para a correção, se houver pendentes */}
-                    {temPendente && (
-                      <button onClick={() => navigate(`/professor/sessao/${s.id}/corrigir`)} style={{ ...buttonCorrigir, marginTop: "12px" }}>
-                        Ir para correção
+                      <button
+                        onClick={() =>
+                          navigate(`/professor/curso/${courseId}/turma/${classId}/respostas-abertas/${s.id}`)
+                        }
+                        style={buttonVerRespostas}
+                      >
+                        Ver respostas
                       </button>
                     )}
+                  </div>
+                </div>
+
+                {/* Se pendente, mostra também o atalho para corrigir */}
+                {temPendente && (
+                  <div style={{ marginTop: "10px", display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => navigate(`/professor/sessao/${s.id}/corrigir`)}
+                      style={buttonCorrigir}
+                    >
+                      Corrigir respostas
+                    </button>
                   </div>
                 )}
               </div>
@@ -703,6 +627,11 @@ const buttonCorrigir = {
   background: "var(--cor-aviso)", color: "#fff",
   fontWeight: "bold", fontSize: "13px", cursor: "pointer",
 };
+const buttonVerRespostas = {
+  padding: "7px 14px", borderRadius: "8px", border: "none",
+  background: "var(--cor-primaria)", color: "#fff",
+  fontWeight: "bold", fontSize: "13px", cursor: "pointer",
+};
 const cardButton = {
   width: "100%", padding: "10px 14px", marginBottom: "10px",
   borderRadius: "8px", border: "1px solid var(--borda)", cursor: "pointer",
@@ -743,8 +672,8 @@ const presencaRow = {
   display: "flex", alignItems: "center", gap: "16px",
   marginTop: "10px", padding: "10px 0 4px", borderTop: "1px solid var(--borda)",
 };
-const presencaItem = { display: "flex", flexDirection: "column", alignItems: "center", minWidth: "56px" };
-const presencaNumero = {
+const presencaItem    = { display: "flex", flexDirection: "column", alignItems: "center", minWidth: "56px" };
+const presencaNumero  = {
   fontSize: "22px", fontWeight: "bold", color: "var(--texto)",
   fontFamily: "'Fredoka One', sans-serif", lineHeight: 1,
 };
@@ -768,43 +697,11 @@ const corrigirRow = {
   background: "var(--cor-aviso-claro)", borderRadius: "8px",
   border: "1px solid var(--cor-aviso-borda)", gap: "10px", flexWrap: "wrap",
 };
-
-// Seção de respostas abertas
-const questaoAbertaBloco = {
-  marginBottom: "20px", paddingBottom: "20px",
-  borderBottom: "1px solid var(--borda)",
-};
-const questaoAbertaHeader = {
-  display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px",
-};
-const questaoNum = {
-  fontSize: "11px", fontWeight: "bold", color: "var(--texto-muito-suave)",
-  textTransform: "uppercase", letterSpacing: "0.5px",
-};
-const questaoTexto = {
-  fontSize: "15px", fontWeight: "600", color: "var(--texto)",
-  margin: "0 0 12px", lineHeight: 1.4,
-};
-const respostaBloco = (isCorrect) => ({
-  border: `1px solid ${
-    isCorrect === true  ? "var(--cor-primaria)"
-    : isCorrect === false ? "var(--cor-perigo)"
-    : "var(--borda)"
-  }`,
-  borderRadius: "8px", padding: "12px", marginBottom: "10px",
-  background: isCorrect === true  ? "var(--cor-primaria-claro)"
-            : isCorrect === false ? "var(--cor-perigo-claro)"
-            : "var(--bg)",
-});
-const alunoAvatar = {
-  width: "30px", height: "30px", borderRadius: "50%",
-  background: "var(--cor-primaria)", color: "#fff",
-  display: "flex", alignItems: "center", justifyContent: "center",
-  fontSize: "13px", fontWeight: "bold", flexShrink: 0,
-};
-const respostaTextoBox = {
-  background: "var(--bg-card)", borderRadius: "6px",
-  padding: "8px 12px", border: "1px solid var(--borda)",
+const verRespostasRow = {
+  display: "flex", justifyContent: "space-between", alignItems: "center",
+  marginTop: "10px", padding: "10px 12px",
+  background: "var(--cor-primaria-claro)", borderRadius: "8px",
+  border: "1px solid var(--cor-primaria-borda)", gap: "10px", flexWrap: "wrap",
 };
 const xpBadge = {
   fontSize: "12px", fontWeight: "bold",

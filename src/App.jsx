@@ -22,6 +22,7 @@ import ProfileAluno        from "./pages/ProfileAluno";
 import ProfileProfessor    from "./pages/ProfileProfessor";
 import SessionLivePage     from "./pages/SessionLivePage";
 import CorrectOpenAnswers  from "./pages/CorrectOpenAnswers";
+import OpenAnswersHistory  from "./pages/OpenAnswersHistory";
 
 // Rotas onde a sidebar NÃO deve aparecer (tela cheia imersiva)
 const ROTAS_SEM_SIDEBAR = [
@@ -93,6 +94,9 @@ function AppLayout() {
           } />
           <Route path="/professor/curso/:courseId/turma/:classId" element={
             <ProtectedRoute><ClassPageProfessor /></ProtectedRoute>
+          } />
+          <Route path="/professor/curso/:courseId/turma/:classId/respostas-abertas/:sessionId" element={
+            <ProtectedRoute><OpenAnswersHistory /></ProtectedRoute>
           } />
           <Route path="/professor/quiz/:quizId" element={
             <ProtectedRoute><EditQuiz /></ProtectedRoute>
