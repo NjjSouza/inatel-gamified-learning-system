@@ -6,7 +6,6 @@ import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import TwemojiImg from "../components/TwemojiImg";
 import Spinner from "../components/Spinner";
-import BackButton from "../components/BackButton";
 
 function SessionTimer({ questionIndex }) {
   const [seconds, setSeconds] = useState(0);
@@ -116,7 +115,6 @@ export default function SessionLivePage() {
           <p style={quizLabel}>{quizNome}</p>
           <p style={codigoLabel}>Código: <strong>{session.pin}</strong></p>
         </div>
-        <BackButton />
         <div style={progressInfo}>
           {totalQuestions > 0 && (
             <SessionTimer questionIndex={currentIndex} />

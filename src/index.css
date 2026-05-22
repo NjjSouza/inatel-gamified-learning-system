@@ -1,18 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap');
 
 /* Variáveis globais - Inatelligent
-Primário: verde (#32ae36)
-Perigo: vvermelho (#C64D4D) - ações destrutivas
-Aviso: laranja (#e65100/#ff9800)
+Primário: verde 
+Perigo: vermelho - ações destrutivas
+Aviso: laranja
 Sucesso: verde
 Neutro: cinza
 Fundo: azul escuro */
 
 :root {
   /* Cor primária */
-  --cor-primaria:         #32ae36;
+  --cor-primaria:         #06df2e;
   --cor-primaria-hover:   #279b2b;
-  --cor-primaria-claro:   #cbe4cd;
+  --cor-primaria-claro:   #daeedc;
   --cor-primaria-borda:   rgba(50, 174, 54, 0.35);
   --cor-primaria-texto:   #1b5e20;
 
@@ -30,25 +30,25 @@ Fundo: azul escuro */
   --cor-aviso-texto:      #bf360c;
 
   /* Progresso: (médio, 40 - 69%) */
-  --cor-alerta:           #ff9800;
+  --cor-alerta:           #e08000;
   --cor-alerta-claro:     #fff8e1;
 
   /* Fundos e superfícies (modo claro) */
-  --bg:                   #7d9db7;      /* azul escuro - fundo da página */
-  --bg-card:              #e8f1f4;      /* cards/painéis brancos */
+  --bg:                   #82a8c7;      /* azul - fundo da página */
+  --bg-card:              #ffffff;      /* cards brancos puros - melhor contraste */
   --bg-input:             #f4f8ff;      /* inputs levemente azulados */
-  --bg-hover:             #f0f4f8;
+  --bg-hover:             #eef2f7;
 
   /* Texto (modo claro) */
   --texto:                #1a1a2e;      /* quase preto */
-  --texto-suave:          #414d61;      /* cinza escuro */
-  --texto-muito-suave:    #9aa5b4;      /* cinza médio */
+  --texto-suave:          #2d3f57;      /* azul-escuro */
+  --texto-muito-suave:    #607590;     
   --texto-inv:            #ffffff;      /* texto sobre fundos escuros */
 
   /* Bordas e sombras (modo claro) */
-  --borda:                #b4c6e1;
-  --sombra:               rgba(26, 58, 92, 0.12);
-  --sombra-card:          0 2px 12px rgba(26, 58, 92, 0.10);
+  --borda:                #c8d8ea;
+  --sombra:               rgba(26, 58, 92, 0.14);
+  --sombra-card:          0 2px 12px rgba(26, 58, 92, 0.12);
 
   /* Destaques especiais */
   --destaque-primeiro:    #e8f5e9;      /* 1º lugar no ranking */
@@ -61,15 +61,14 @@ Fundo: azul escuro */
 /* Modo escuro */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Verde */
-    --cor-primaria:         #188f1e;
-    --cor-primaria-hover:   #248429;
+    --cor-primaria:         #3dbb42;
+    --cor-primaria-hover:   #2fa334;
     --cor-primaria-claro:   #1b3a1e;
     --cor-primaria-borda:   rgba(76, 187, 82, 0.35);
     --cor-primaria-texto:   #a5d6a7;
 
     /* Perigo */
-    --cor-perigo:           #e06060;
+    --cor-perigo:           #a93737;
     --cor-perigo-hover:     #c95555;
     --cor-perigo-claro:     #3b1212;
     --cor-perigo-borda:     rgba(224, 96, 96, 0.3);
@@ -81,20 +80,24 @@ Fundo: azul escuro */
     --cor-aviso-borda:      #6d2f00;
     --cor-aviso-texto:      #ffccbc;
 
+    /* Progresso */
+    --cor-alerta:           #ffb300;
+    --cor-alerta-claro:     #2a1f00;
+
     /* Fundos (modo escuro) */
-    --bg:                   #365d7d;      /* azul muito escuro */
-    --bg-card:              #162032;       /* cards azul escuro */
+    --bg:                   #365d7d;
+    --bg-card:              #162032;
     --bg-input:             #1a2a40;
     --bg-hover:             #1e2f45;
 
     /* Texto (modo escuro) */
-    --texto:                #e8edf4;      /* quase branco */
-    --texto-suave:          #7a91aa;      /* azul acinzentado */
-    --texto-muito-suave:    #6982a5;      /* cinza azulado */
+    --texto:                #e8edf4;
+    --texto-suave:          #94aac4;      
+    --texto-muito-suave:    #7a96b2;     
     --texto-inv:            #0d1f33;
 
     /* Bordas e sombras */
-    --borda:                #1e3450;
+    --borda:                #253d56;      
     --sombra:               rgba(0, 0, 0, 0.4);
     --sombra-card:          0 2px 16px rgba(0, 0, 0, 0.35);
 
@@ -124,7 +127,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Modo escuro: interrogações mais sutis */
 @media (prefers-color-scheme: dark) {
   body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='10' y='40' font-size='30' fill='rgba(255,255,255,0.04)'%3E%3F%3C/text%3E%3C/svg%3E");
@@ -180,14 +182,12 @@ textarea::placeholder {
 
 /* Utilitários globais */
 
-/* Remove o fundo opaco de páginas que sobrepunham as interrogações */
 .fundo-quiz {
   min-height: 100vh;
   width: 100%;
   background: transparent;
 }
 
-/* Card padrão reutilizável */
 .card-padrao {
   background: var(--bg-card);
   border-radius: 12px;
@@ -195,7 +195,6 @@ textarea::placeholder {
   border: 1px solid var(--borda);
 }
 
-/* Badge de XP */
 .badge-xp {
   display: inline-flex;
   align-items: center;
@@ -208,17 +207,15 @@ textarea::placeholder {
   border-radius: 10px;
 }
 
-/* Badge de questão aberta */
 .badge-aberta {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 10px;
   background: var(--cor-aviso-claro);
-  color: var(--cor-aviso);
+  color: var(--cor-aviso-texto);     
   font-weight: bold;
 }
 
-/* Barra de progresso base */
 .barra-fundo {
   width: 100%;
   height: 8px;

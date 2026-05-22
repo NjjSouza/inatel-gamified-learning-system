@@ -197,6 +197,7 @@ export default function SessionPlayer() {
   /* Questão aberta */
   if (isAberta) return (
     <div style={{ minHeight: "100vh", background: "transparent" }}>
+      <BackButton />
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay

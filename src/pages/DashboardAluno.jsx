@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useClasses } from "../hooks/useClasses";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
+import Spinner from "../components/Spinner";
 
 function DashboardAluno() {
   const { user } = useAuth();
@@ -36,6 +37,8 @@ function DashboardAluno() {
     fetchDisciplinas();
   }, [user]);
 
+  if (loading) return <Spinner />;
+
   return (
     <div style={container}>
       <div style={header}>
@@ -45,9 +48,7 @@ function DashboardAluno() {
 
       <div style={card}>
         <h2>Minhas Disciplinas</h2>
-        {loading ? (
-          <p style={{ color: "var(--texto-suave)" }}>Carregando...</p>
-        ) : disciplinas.length === 0 ? (
+        {disciplinas.length === 0 ? (
           <p style={{ color: "var(--texto-suave)" }}>Você ainda não está matriculado em nenhuma disciplina.</p>
         ) : (
           disciplinas.map((curso) => (

@@ -365,11 +365,55 @@ export function useSessions() {
    * Usado pela página CorrectOpenAnswers para envio atômico.
    */
   const gradeOpenAnswersBatch = async (correcoes, sessionId) => {
+    // Corrige todas as respostas
     await Promise.all(
       correcoes.map(({ answerId, isCorrect, xpAmount, userId, classId, questionId }) =>
         gradeOpenAnswer(answerId, isCorrect, userId, classId, sessionId, questionId, xpAmount)
       )
     );
+
+    // Recalcula percentualGeral e acertosPorQuestao incluindo abertas corrigidas
+    const sessSnap = await getDoc(doc(db, "sessions", sessionId));
+    if (!sessSnap.exists()) return;
+    const { quizId } = sessSnap.data();
+
+    const allAnswersSnap = await getDocs(query(
+      collection(db, "session_answers"),
+      where("sessionId", "==", sessionId)
+    ));
+
+    // Só conta respostas já corrigidas (multipla escolha + abertas agora corrigidas)
+    const todasGraded = allAnswersSnap.docs
+      .map(d => d.data())
+      .filter(r => r.isCorrect !== null && r.isCorrect !== undefined);
+
+    const total = todasGraded.length;
+    const acertos = todasGraded.filter(r => r.isCorrect).length;
+    const percentualGeral = total > 0 ? Math.round((acertos / total) * 100) : 0;
+
+    const porQuestao = {};
+    todasGraded.forEach(r => {
+      if (!porQuestao[r.questionId]) porQuestao[r.questionId] = { acertos: 0, total: 0 };
+      porQuestao[r.questionId].total++;
+      if (r.isCorrect) porQuestao[r.questionId].acertos++;
+    });
+
+    const questoesSnap = await getDocs(collection(db, "quizzes", quizId, "questions"));
+    const questoesMap = {};
+    questoesSnap.docs.forEach(d => { questoesMap[d.id] = d.data().pergunta; });
+
+    const acertosPorQuestao = Object.entries(porQuestao).map(([qId, dados]) => ({
+      questionId: qId,
+      pergunta: questoesMap[qId] || "Questão removida",
+      percentual: Math.round((dados.acertos / dados.total) * 100),
+      acertos: dados.acertos,
+      total: dados.total,
+    }));
+
+    await updateDoc(doc(db, "sessions", sessionId), {
+      percentualGeral,
+      acertosPorQuestao,
+    });
   };
 
   // Busca respostas abertas de uma sessão para o professor corrigir

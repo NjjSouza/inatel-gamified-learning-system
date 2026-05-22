@@ -3,6 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useCourses } from "../hooks/useCourses";
 import { useQuizzes } from "../hooks/useQuizzes";
 import { useNavigate } from "react-router-dom";
+import Spinner from "../components/Spinner";
 
 function DashboardProfessor() {
   const { user } = useAuth();
@@ -14,11 +15,18 @@ function DashboardProfessor() {
   const [courses, setCourses] = useState([]);
   const [nomeQuiz, setNomeQuiz] = useState("");
   const [quizzes, setQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const fetchCourses = async () => { setCourses(await getCourses()); };
   const fetchQuizzes = async () => { setQuizzes(await getQuizzes()); };
 
-  useEffect(() => { fetchCourses(); fetchQuizzes(); }, []);
+  useEffect(() => {
+    const fetch = async () => {
+      await Promise.all([fetchCourses(), fetchQuizzes()]);
+      setLoading(false);
+    };
+    fetch();
+  }, []);
 
   const handleCreateCourse = async () => {
     if (!nomeCurso.trim()) return;
@@ -46,6 +54,8 @@ function DashboardProfessor() {
       await fetchQuizzes();
     } catch (e) { alert("Erro ao excluir: " + e.message); }
   };
+
+  if (loading) return <Spinner />;
 
   return (
     <div style={container}>

@@ -3,24 +3,27 @@ import { useState, useEffect } from "react";
 import { useQuizzes } from "../hooks/useQuizzes";
 import TwemojiImg from "../components/TwemojiImg";
 import BackButton from "../components/BackButton";
+import Spinner from "../components/Spinner";
 
 export default function EditQuiz() {
   const { quizId } = useParams();
   const navigate = useNavigate();
   const { addQuestion, getQuestions, updateQuestion, deleteQuestion } = useQuizzes();
 
-  const [tipo, setTipo] = useState("multipla"); // "multipla" ou "aberta"
+  const [tipo, setTipo] = useState("multipla");
   const [pergunta, setPergunta] = useState("");
   const [alternativas, setAlternativas] = useState(["", ""]);
   const [correta, setCorreta] = useState(0);
   const [xpValor, setXpValor] = useState(10);
   const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState(null);
 
   const fetchQuestions = async () => {
     const data = await getQuestions(quizId);
     setQuestions(data);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -48,7 +51,7 @@ export default function EditQuiz() {
     const xp = parseInt(xpValor, 10);
     if (isNaN(xp) || xp < 1) return alert("O valor de XP deve ser pelo menos 1");
 
-    const base = { pergunta, tipo: tipo, xp };
+    const base = { pergunta, tipo, xp };
     const payload = tipo === "multipla"
       ? { ...base, alternativas, respostaCorreta: correta }
       : base;
@@ -130,6 +133,8 @@ export default function EditQuiz() {
     }
   };
 
+  if (loading) return <Spinner />;
+
   return (
     <div style={container}>
       <BackButton />
@@ -189,10 +194,10 @@ export default function EditQuiz() {
                 {alternativas.length > 2 && (
                   <button
                     onClick={() => handleRemoveAlternativa(index)}
-                    style={buttonRemove}
+                    style={buttonRemoveAlt}
                     title="Remover alternativa"
                   >
-                    −
+                    -
                   </button>
                 )}
               </div>
@@ -235,18 +240,17 @@ export default function EditQuiz() {
       </h2>
 
       {questions.length === 0 ? (
-        <p>Nenhuma pergunta ainda</p>
+        <p style={{ color: "var(--texto-suave)" }}>Nenhuma pergunta ainda</p>
       ) : (
         <ul style={{ padding: 0 }}>
           {questions.map((q, i) => (
             <li key={q.id} style={questionCard}>
-
               {editingId === q.id ? (
                 <div>
                   {/* Tipo no edit */}
                   <div style={tipoRow}>
                     <button
-                      onClick={() => setEditData(p => ({ ...p, tipo: "multipla", alternativas: p.alternativas?.length ? p.alternativas : ["",""] }))}
+                      onClick={() => setEditData(p => ({ ...p, tipo: "multipla", alternativas: p.alternativas?.length ? p.alternativas : ["", ""] }))}
                       style={{ ...tipoBtn, ...(editData.tipo === "multipla" ? tipoBtnAtivo : {}) }}
                     >
                       Múltipla escolha
@@ -289,7 +293,7 @@ export default function EditQuiz() {
                             style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
                           />
                           {editData.alternativas.length > 2 && (
-                            <button onClick={() => handleEditRemoveAlternativa(idx)} style={buttonRemove}>−</button>
+                            <button onClick={() => handleEditRemoveAlternativa(idx)} style={buttonRemoveAlt}>−</button>
                           )}
                         </div>
                       ))}
@@ -330,25 +334,27 @@ export default function EditQuiz() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <strong>{i + 1}. {q.pergunta}</strong>
+                        <strong style={{ color: "var(--texto)" }}>{i + 1}. {q.pergunta}</strong>
                         {q.tipo === "aberta" && (
                           <span style={badgeAberta}>Aberta</span>
                         )}
                       </div>
-                      <span style={xpBadge}> <TwemojiImg codepoint="26a1" size={14} alt="xp" /> {q.xp ?? 10} XP</span>
+                      <span style={xpBadge}>
+                        <TwemojiImg codepoint="26a1" size={14} alt="xp" /> {q.xp ?? 10} XP
+                      </span>
                     </div>
                     <div style={{ display: "flex", gap: "8px", marginLeft: "10px", flexShrink: 0 }}>
                       <button onClick={() => startEdit(q)} style={buttonEdit}>Editar</button>
-                      <button onClick={() => handleDelete(q.id)} style={buttonRemove}>Excluir</button>
+                      <button onClick={() => handleDelete(q.id)} style={buttonDelete}>Excluir</button>
                     </div>
                   </div>
 
-                  {(q.tipo !== "aberta") && q.alternativas && (
+                  {q.tipo !== "aberta" && q.alternativas && (
                     <ol style={{ marginTop: "8px", paddingLeft: "16px", listStyleType: "lower-alpha" }}>
                       {q.alternativas.map((alt, idx) => (
                         <li key={idx} style={{
-                          color: idx === q.respostaCorreta ? "#32ae36" : "inherit",
-                          fontWeight: idx === q.respostaCorreta ? "bold" : "normal"
+                          color: idx === q.respostaCorreta ? "var(--cor-primaria)" : "var(--texto)",
+                          fontWeight: idx === q.respostaCorreta ? "bold" : "normal",
                         }}>
                           {alt}
                         </li>
@@ -365,83 +371,97 @@ export default function EditQuiz() {
   );
 }
 
-const container = { padding: "20px", maxWidth: "800px", margin: "0 auto", textAlign: "center" };
+const container = {
+  padding: "20px", maxWidth: "800px", margin: "0 auto", textAlign: "center",
+};
 const card = {
-  background: "var(--bg-card)", borderRadius: "10px", padding: "25px",
-  boxShadow: "0 0 10px rgba(0,0,0,0.1)", marginTop: "20px"
+  background: "var(--bg-card)", borderRadius: "12px", padding: "25px",
+  boxShadow: "var(--sombra-card)", border: "1px solid var(--borda)", marginTop: "20px",
 };
 const inputStyle = {
   width: "100%", padding: "10px", marginBottom: "12px",
-  borderRadius: "6px", border: "1px solid #ccc", boxSizing: "border-box"
+  borderRadius: "6px", border: "1px solid var(--borda)",
+  background: "var(--bg-input)", color: "var(--texto)", boxSizing: "border-box",
 };
-const sectionLabel = { fontWeight: "bold", textAlign: "left", marginBottom: "8px" };
-const altRow = { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" };
-
+const sectionLabel = {
+  fontWeight: "bold", textAlign: "left", marginBottom: "8px", color: "var(--texto)",
+};
+const altRow = {
+  display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px",
+};
 const tipoRow = {
-  display: "flex", gap: "8px", marginBottom: "16px", justifyContent: "center"
+  display: "flex", gap: "8px", marginBottom: "16px", justifyContent: "center",
 };
 const tipoBtn = {
   padding: "8px 16px", borderRadius: "20px", border: "2px solid var(--borda)",
-  background: "var(--bg)", color: "var(--texto)", cursor: "pointer",
-  fontWeight: "600", fontSize: "13px", transition: "all 0.15s"
+  background: "var(--bg-card)", color: "var(--texto)", cursor: "pointer",
+  fontWeight: "600", fontSize: "13px", transition: "all 0.15s",
 };
 const tipoBtnAtivo = {
-  background: "var(--cor-primaria)", borderColor: "var(--cor-primaria)",
-  color: "#fff"
+  background: "var(--cor-primaria)", borderColor: "var(--cor-primaria)", color: "#fff",
 };
-
 const xpRow = {
   display: "flex", alignItems: "center", gap: "10px",
   marginTop: "16px", justifyContent: "center",
   padding: "12px", borderRadius: "8px",
-  background: "var(--bg)", border: "1px solid var(--borda)"
+  background: "var(--bg-input)", border: "1px solid var(--borda)",
 };
-const xpLabel = { fontSize: "14px", fontWeight: "600", color: "var(--texto-suave)" };
+const xpLabel = {
+  fontSize: "14px", fontWeight: "600", color: "var(--texto-suave)",
+};
 const xpInput = {
   width: "70px", padding: "6px 10px", borderRadius: "6px",
   border: "1px solid var(--borda)", fontSize: "15px",
-  fontWeight: "bold", textAlign: "center", boxSizing: "border-box"
+  fontWeight: "bold", textAlign: "center", boxSizing: "border-box",
+  background: "var(--bg-card)", color: "var(--texto)",
 };
-const xpSufixo = { fontSize: "13px", color: "var(--texto-muito-suave)" };
-
+const xpSufixo = {
+  fontSize: "13px", color: "var(--texto-muito-suave)",
+};
 const xpBadge = {
-  display: "inline-block", marginTop: "4px",
+  display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "4px",
   fontSize: "12px", fontWeight: "bold",
-  color: "#32ae36", background: "#e8f5e9",
-  padding: "2px 8px", borderRadius: "10px"
+  background: "var(--cor-primaria-claro)", color: "var(--cor-primaria-texto)",
+  padding: "2px 8px", borderRadius: "10px",
 };
 const badgeAberta = {
   fontSize: "11px", padding: "2px 8px", borderRadius: "10px",
-  background: "#fff3e0", color: "#e65100", fontWeight: "bold"
+  background: "var(--cor-aviso-claro)", color: "var(--cor-aviso-texto)", fontWeight: "bold",
 };
 const abertoHint = {
-  textAlign: "left", fontSize: "13px", color: "var(--texto-suave)",
-  background: "#fff3e0", border: "1px solid #ffe0b2",
-  borderRadius: "8px", padding: "10px 14px", margin: "10px 0"
+  textAlign: "left", fontSize: "13px", color: "var(--cor-aviso-texto)",
+  background: "var(--cor-aviso-claro)", border: "1px solid var(--cor-aviso-borda)",
+  borderRadius: "8px", padding: "10px 14px", margin: "10px 0",
 };
-
 const buttonPrimary = {
   padding: "10px 20px", borderRadius: "8px", border: "none",
-  background: "#32ae36", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "var(--cor-primaria)", color: "#fff", cursor: "pointer", fontWeight: "bold",
 };
 const buttonSecondary = {
   padding: "8px 14px", borderRadius: "8px",
-  border: "1px dashed #aaa", background: "#fafafa",
-  cursor: "pointer", marginTop: "4px"
+  border: "1px dashed var(--borda)", background: "var(--bg-card)",
+  color: "var(--texto-suave)", cursor: "pointer", marginTop: "4px",
 };
-const buttonRemove = {
-  padding: "6px 10px", borderRadius: "6px", border: "none",
-  background: "var(--cor-primaria)", color: "#fff", cursor: "pointer", fontWeight: "bold"
+const buttonRemoveAlt = {
+  padding: "6px 10px", borderRadius: "6px",
+  border: "1px solid var(--borda)",
+  background: "var(--bg-card)", color: "var(--texto-suave)",
+  cursor: "pointer", fontWeight: "bold", fontSize: "18px",
 };
 const buttonEdit = {
   padding: "6px 10px", borderRadius: "6px", border: "none",
-  background: "#32ae36", color: "#fff", cursor: "pointer", fontWeight: "bold"
+  background: "var(--texto-suave)", color: "#fff", cursor: "pointer", fontWeight: "bold",
+};
+const buttonDelete = {
+  padding: "6px 10px", borderRadius: "6px", border: "none",
+  background: "var(--cor-perigo)", color: "#fff", cursor: "pointer", fontWeight: "bold",
 };
 const buttonVoltar = {
   padding: "10px 20px", borderRadius: "8px",
-  border: "1px solid #ccc", background: "var(--bg-card)", cursor: "pointer"
+  border: "1px solid var(--borda)", background: "var(--bg-card)",
+  color: "var(--texto)", cursor: "pointer",
 };
 const questionCard = {
   background: "var(--bg-card)", listStyle: "none", marginBottom: "15px", padding: "15px",
-  border: "1px solid #ccc", borderRadius: "10px", textAlign: "left"
+  border: "1px solid var(--borda)", borderRadius: "10px", textAlign: "left",
 };
