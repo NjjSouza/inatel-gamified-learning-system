@@ -34,19 +34,19 @@ export function useClasses() {
     });
   };
 
-  const enrollByEmail = async (classId, email) => {
-    if (!email) throw new Error("E-mail inválido");
+  const enrollByMatricula = async (classId, matricula) => {
+    if (!matricula) throw new Error("Matrícula inválida");
 
     const existing = await getDocs(query(
       collection(db, "enrollments"),
       where("classId", "==", classId),
-      where("email", "==", email.toLowerCase())
+      where("matricula", "==", matricula)
     ));
-    if (!existing.empty) throw new Error("E-mail já matriculado nesta turma");
+    if (!existing.empty) throw new Error("Aluno já matriculado nesta turma");
 
     const userSnap = await getDocs(query(
       collection(db, "usuarios"),
-      where("email", "==", email.toLowerCase())
+      where("matricula", "==", matricula)
     ));
 
     if (!userSnap.empty) {
@@ -56,7 +56,8 @@ export function useClasses() {
       }
       await addDoc(collection(db, "enrollments"), {
         classId,
-        email: email.toLowerCase(),
+        matricula,
+        email: alunoDoc.data().email || "",
         userId: alunoDoc.id,
         nome: alunoDoc.data().nome || "",
         enrolledAt: new Date(),
@@ -64,7 +65,8 @@ export function useClasses() {
     } else {
       await addDoc(collection(db, "enrollments"), {
         classId,
-        email: email.toLowerCase(),
+        matricula,
+        email: "",
         userId: null,
         nome: "",
         enrolledAt: new Date(),
@@ -90,10 +92,10 @@ export function useClasses() {
     return snapshot.docs.map(d => d.data().classId);
   };
 
-  const linkEnrollments = async (userId, email, nome) => {
+  const linkEnrollments = async (userId, matricula, nome) => {
     const q = query(
       collection(db, "enrollments"),
-      where("email", "==", email.toLowerCase()),
+      where("matricula", "==", matricula),
       where("userId", "==", null)
     );
     const snapshot = await getDocs(q);
@@ -101,7 +103,6 @@ export function useClasses() {
     const updates = snapshot.docs.map((d) =>
       updateDoc(doc(db, "enrollments", d.id), {
         userId,
-        nome: nome || "",
       })
     );
     await Promise.all(updates);
@@ -111,7 +112,7 @@ export function useClasses() {
     createClass,
     getClassesByCourse,
     closeClass,
-    enrollByEmail,
+    enrollByMatricula,
     getEnrollments,
     getEnrolledClassIds,
     linkEnrollments,

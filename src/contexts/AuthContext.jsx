@@ -30,13 +30,14 @@ export function AuthProvider({ children }) {
           if (userData.tipo === "aluno") {
             const pendentes = await getDocs(query(
               collection(db, "enrollments"),
-              where("email", "==", firebaseUser.email.toLowerCase()),
+              where("matricula", "==", userData.matricula), // matrícula se torna identificador principal do enrollment
               where("userId", "==", null)
             ));
             const updates = pendentes.docs.map((d) =>
               updateDoc(doc(db, "enrollments", d.id), {
                 userId: firebaseUser.uid,
                 nome: userData.nome || "",
+                email: firebaseUser.email || "",  // preenche o email no primeiro acesso
               })
             );
             await Promise.all(updates);
@@ -57,16 +58,23 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  const signup = async (email, senha, tipo, nome) => {
+  const signup = async (email, senha, tipo, nome, matricula = null) => {
     const credenciais = await createUserWithEmailAndPassword(auth, email, senha);
     const newUser = credenciais.user;
 
-    await setDoc(doc(db, "usuarios", newUser.uid), {
+    const userData = {
       nome: nome || "Usuário",
       email: newUser.email,
       tipo: tipo,
       criadoEm: new Date(),
-    });
+    };
+
+    // adiciona matrícula apenas para aluno
+    if (tipo === "aluno") {
+      userData.matricula = matricula || "";
+    }
+
+    await setDoc(doc(db, "usuarios", newUser.uid), userData);
   };
 
   const login = async (email, senha) => {

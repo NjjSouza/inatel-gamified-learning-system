@@ -14,15 +14,18 @@ export default function Navbar({ onMenuToggle, menuOpen }) {
   const perfilRota   = isProfessor ? "/professor/perfil" : "/aluno/perfil";
   const homeRota     = isProfessor ? "/professor" : "/aluno";
   const estaNoPerfil = location.pathname === perfilRota;
+  const estaNaHome   = location.pathname === homeRota;
+
+  const showHamburger = isProfessor && isMobile;
+  const showVoltar    = !estaNaHome;              
 
   const handlePerfilClick = () => navigate(estaNoPerfil ? -1 : perfilRota);
   const handleLogoClick   = () => navigate(homeRota);
-
-  // Hambúrguer só aparece para professor no mobile
-  const showHamburger = isProfessor && isMobile;
+  const handleVoltar      = () => navigate(-1);
 
   return (
     <div style={navbar}>
+      {/* Lado esquerdo: hambúrguer + logo + voltar */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {showHamburger && (
           <button
@@ -42,8 +45,16 @@ export default function Navbar({ onMenuToggle, menuOpen }) {
           style={{ height: "32px", objectFit: "contain", cursor: "pointer" }}
           title="Ir para o início"
         />
+
+        {showVoltar && (
+          <button onClick={handleVoltar} style={buttonVoltar} title="Voltar">
+            <ArrowIcon />
+            {!isMobile && <span>Voltar</span>}
+          </button>
+        )}
       </div>
 
+      {/* Lado direito: perfil */}
       <button
         onClick={handlePerfilClick}
         style={{
@@ -55,6 +66,16 @@ export default function Navbar({ onMenuToggle, menuOpen }) {
         {user?.nome?.charAt(0).toUpperCase() || "?"}
       </button>
     </div>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5"
+      strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
   );
 }
 
@@ -93,6 +114,19 @@ const hamburgerBtn = {
   color: "var(--texto)", cursor: "pointer",
   display: "flex", alignItems: "center", justifyContent: "center",
   padding: "6px", borderRadius: "8px",
+};
+
+const buttonVoltar = {
+  display: "inline-flex", alignItems: "center", gap: "4px",
+  background: "none", border: "none",
+  color: "var(--texto-suave)",      
+  fontSize: "15px",                   
+  fontWeight: "400",                 
+  fontFamily: "'Fredoka One', sans-serif", 
+  cursor: "pointer",
+  padding: "6px 8px", borderRadius: "8px",
+  letterSpacing: "0.3px",            
+  transition: "color 0.15s",
 };
 
 const buttonPerfil = {

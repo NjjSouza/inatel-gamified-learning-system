@@ -6,7 +6,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
-import BackButton from "../components/BackButton";
 import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
 import { getNivel } from "../utils/niveis";
@@ -291,7 +290,6 @@ export default function CoursePageAluno() {
 
   return (
     <div style={container}>
-      <BackButton />
       <div style={header}>
         <h1>{course.nome}</h1>
         <p style={{ color: "var(--texto-suave)" }}>

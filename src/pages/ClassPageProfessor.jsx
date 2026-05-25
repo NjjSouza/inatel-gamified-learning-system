@@ -7,7 +7,6 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
 import TwemojiImg from "../components/TwemojiImg";
-import BackButton from "../components/BackButton";
 import { getNivel, NIVEIS } from "../utils/niveis";
 
 // Timer ativo
@@ -32,7 +31,7 @@ export default function ClassPageProfessor() {
   const { courseId, classId } = useParams();
   const navigate = useNavigate();
 
-  const { getEnrollments, enrollByEmail, closeClass } = useClasses();
+  const { getEnrollments, enrollByMatricula, closeClass } = useClasses();
   const { createSession, startSession, finishSession,
           nextQuestion, listenPlayers, listenSessionsByClass,
           getOpenAnswersForSession } = useSessions();
@@ -46,7 +45,7 @@ export default function ClassPageProfessor() {
   const [playersBySession, setPlayersBySession] = useState({});
   const [respondidosPorSessao, setRespondidosPorSessao] = useState({});
   const [enrollments, setEnrollments] = useState([]);
-  const [enrollEmail, setEnrollEmail] = useState("");
+  const [enrollMatricula, setEnrollMatricula] = useState("");
   const [expandedSession, setExpandedSession] = useState(null);
   const [quizTemAberta, setQuizTemAberta]     = useState({});
   const [pendentePorSessao, setPendentePorSessao] = useState({});
@@ -156,13 +155,18 @@ export default function ClassPageProfessor() {
   };
 
   const handleEnroll = async () => {
-    if (!enrollEmail.trim()) return alert("Digite o e-mail");
+    if (!enrollMatricula.trim()) {
+      return alert("Digite a matrícula do aluno");
+    }
+
     try {
-      await enrollByEmail(classId, enrollEmail.trim());
-      setEnrollEmail("");
+      await enrollByMatricula(classId, enrollMatricula.trim());
+      setEnrollMatricula("");
       setEnrollments(await getEnrollments(classId));
       alert("Aluno matriculado!");
-    } catch (e) { alert("Erro: " + e.message); }
+    } catch (e) {
+      alert("Erro: " + e.message);
+    }
   };
 
   // Alunos ordenados
@@ -170,14 +174,16 @@ export default function ClassPageProfessor() {
     if (ordenacao === "ranking") {
       return (xpPorAluno[b.userId] || 0) - (xpPorAluno[a.userId] || 0);
     }
-    return (a.nome || a.email).localeCompare(b.nome || b.email, "pt-BR");
+    return (a.nome || a.matricula || "").localeCompare(
+      (b.nome || b.matricula || ""),
+      "pt-BR"
+    );
   });
 
   if (!classData) return <Spinner />;
 
   return (
     <div style={container}>
-      <BackButton />
       <div style={header}>
         <h1>Turma {classData.semestre}</h1>
         <span style={{
@@ -348,23 +354,6 @@ export default function ClassPageProfessor() {
                   </div>
                 )}
 
-                {/* Botão ver respostas - só quando já corrigido */}
-                {quizTemAberta[s.quizId] && !temPendente && (
-                  <div style={verRespostasRow}>
-                    <span style={{ fontSize: "13px", color: "var(--texto-suave)" }}>
-                      Questões abertas corrigidas
-                    </span>
-                    <button
-                      onClick={() =>
-                        navigate(`/professor/curso/${courseId}/turma/${classId}/respostas-abertas/${s.id}`)
-                      }
-                      style={buttonVerRespostas}
-                    >
-                      Ver respostas
-                    </button>
-                  </div>
-                )}
-
                 {/* Presença */}
                 {presentes != null && (
                   <div style={presencaRow}>
@@ -496,9 +485,9 @@ export default function ClassPageProfessor() {
         {classData.status === "active" && (
           <div style={{ display: "flex", gap: "8px", marginBottom: "20px", justifyContent: "center" }}>
             <input
-              placeholder="E-mail do aluno"
-              value={enrollEmail}
-              onChange={e => setEnrollEmail(e.target.value)}
+              value={enrollMatricula}
+              onChange={e => setEnrollMatricula(e.target.value)}
+placeholder="Matrícula do aluno"
               style={{ ...inputStyle, flex: 1 }}
             />
             <button onClick={handleEnroll} style={buttonPrimary}>Adicionar aluno</button>
@@ -514,6 +503,7 @@ export default function ClassPageProfessor() {
                 {ordenacao === "ranking" && <th style={thStyle}>#</th>}
                 <th style={thStyle}>Nome</th>
                 <th style={thStyle}>E-mail</th>
+                <th style={thStyle}>Matrícula</th>
                 <th style={thStyle}>Nível</th>
                 <th style={thStyle}>XP</th>
                 <th style={thStyle}>Status</th>
@@ -531,7 +521,20 @@ export default function ClassPageProfessor() {
                       </td>
                     )}
                     <td style={tdStyle}>{e.nome || "-"}</td>
-                    <td style={{ ...tdStyle, fontSize: "13px", color: "var(--texto-suave)" }}>{e.email}</td>
+                    <td style={{
+                      ...tdStyle,
+                      fontSize: "13px",
+                      color: "var(--texto-suave)"
+                    }}>
+                      {e.email || "-"}
+                    </td>
+                    <td style={{
+                      ...tdStyle,
+                      fontWeight: "600",
+                      color: "var(--texto)"
+                    }}>
+                      {e.matricula || "-"}
+                    </td>
                     <td style={tdStyle}>
                       {nivel ? (
                         nivel.label === "-" ? (
@@ -696,12 +699,6 @@ const corrigirRow = {
   marginTop: "10px", padding: "10px 12px",
   background: "var(--cor-aviso-claro)", borderRadius: "8px",
   border: "1px solid var(--cor-aviso-borda)", gap: "10px", flexWrap: "wrap",
-};
-const verRespostasRow = {
-  display: "flex", justifyContent: "space-between", alignItems: "center",
-  marginTop: "10px", padding: "10px 12px",
-  background: "var(--cor-primaria-claro)", borderRadius: "8px",
-  border: "1px solid var(--cor-primaria-borda)", gap: "10px", flexWrap: "wrap",
 };
 const xpBadge = {
   fontSize: "12px", fontWeight: "bold",

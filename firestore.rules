@@ -90,9 +90,13 @@ service cloud.firestore {
         get(/databases/$(database)/documents/classes/$(resource.data.classId))
           .data.professorId == request.auth.uid
         ||
-        (resource.data.userId == null &&
-         request.resource.data.userId == request.auth.uid &&
-         resource.data.email == request.auth.token.email)
+        (
+          resource.data.userId == null &&
+          request.resource.data.userId == request.auth.uid &&
+          resource.data.matricula ==
+            get(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+              .data.matricula
+          )
       );
       allow delete: if isAuthenticated() &&
         get(/databases/$(database)/documents/classes/$(resource.data.classId))

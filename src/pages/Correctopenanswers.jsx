@@ -5,7 +5,6 @@ import { db } from "../services/firebase";
 import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import Spinner from "../components/Spinner";
-import BackButton from "../components/BackButton";
 import TwemojiImg from "../components/TwemojiImg";
 
 // Estados possíveis de correção local (nunca vão ao BD até confirmação final)
@@ -155,8 +154,6 @@ export default function CorrectOpenAnswers() {
 
   return (
     <div style={container}>
-      <BackButton />
-
       {/* Cabeçalho */}
       <div style={header}>
         <div>

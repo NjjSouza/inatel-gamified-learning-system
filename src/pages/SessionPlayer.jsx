@@ -9,7 +9,6 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import LottieOverlay from "../components/LottieOverlay";
 import RankingTable from "../components/RankingTable";
 import Spinner from "../components/Spinner";
-import BackButton from "../components/BackButton";
 import TwemojiImg from "../components/TwemojiImg";
 
 function shuffleArray(array) {
@@ -197,7 +196,6 @@ export default function SessionPlayer() {
   /* Questão aberta */
   if (isAberta) return (
     <div style={{ minHeight: "100vh", background: "transparent" }}>
-      <BackButton />
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay
@@ -265,7 +263,6 @@ export default function SessionPlayer() {
 
   return (
     <div style={{ minHeight: "100vh", background: "transparent" }}>
-      <BackButton />
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay

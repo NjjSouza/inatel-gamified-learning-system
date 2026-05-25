@@ -12,6 +12,7 @@ export default function Register() {
   const [tipo, setTipo] = useState("professor");
   const [erro, setErro] = useState("");
   const [verSenha, setVerSenha] = useState(false);
+  const [matricula, setMatricula] = useState("");
 
   const handleRegister = async () => {
     setErro("");
@@ -23,8 +24,16 @@ export default function Register() {
       setErro("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
+    if (tipo === "aluno") {
+      const matriculaLimpa = matricula.trim();
+      
+      if (!/^\d{3,4}$/.test(matriculaLimpa)) { 
+        setErro("A matrícula deve possuir 3 ou 4 dígitos numéricos.");
+        return;
+      }
+    }
     try {
-      await signup(email, senha, tipo, nome);
+      await signup(email, senha, tipo, nome, matricula);
       navigate("/");
     } catch (err) {
       console.error(err);
@@ -70,7 +79,7 @@ export default function Register() {
 
           {tipo === "aluno" && (
             <div style={alertaAluno}>
-              <strong>Para alunos:</strong> use seu e-mail acadêmico.
+              <strong>Para alunos:</strong> use seu e-mail acadêmico e nome sem abreviações.
             </div>
           )}
 
@@ -89,6 +98,23 @@ export default function Register() {
             onChange={(e) => setEmail(e.target.value)}
             style={inputStyle}
           />
+
+          {tipo === "aluno" && (
+            <input
+              id="matricula"
+              name="matricula"
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="Matrícula (3 ou 4 dígitos)"
+              value={matricula}
+              onChange={(e) => {
+                const valor = e.target.value.replace(/\D/g, "");
+                setMatricula(valor);
+              }}
+              style={inputStyle}
+            />
+          )}
 
           <div style={{ position: "relative", marginBottom: "10px" }}>
             <input

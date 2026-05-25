@@ -2,7 +2,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useQuizzes } from "../hooks/useQuizzes";
 import TwemojiImg from "../components/TwemojiImg";
-import BackButton from "../components/BackButton";
 import Spinner from "../components/Spinner";
 
 export default function EditQuiz() {
@@ -137,7 +136,6 @@ export default function EditQuiz() {
 
   return (
     <div style={container}>
-      <BackButton />
       <h1>Editar Quiz</h1>
 
       {/* Formulário de nova pergunta */}

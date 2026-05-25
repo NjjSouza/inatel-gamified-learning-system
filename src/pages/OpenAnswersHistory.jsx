@@ -5,7 +5,6 @@ import { db } from "../services/firebase";
 import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import Spinner from "../components/Spinner";
-import BackButton from "../components/BackButton";
 
 /**
  * Página somente-leitura de respostas abertas de UMA sessão específica.
@@ -77,7 +76,6 @@ export default function OpenAnswersHistory() {
   if (loading) return <Spinner />;
   if (!sessao)  return (
     <div style={container}>
-      <BackButton />
       <p style={{ color: "var(--texto-suave)" }}>Sessão não encontrada.</p>
     </div>
   );
@@ -92,7 +90,6 @@ export default function OpenAnswersHistory() {
 
   return (
     <div style={container}>
-      <BackButton />
 
       {/* Cabeçalho */}
       <div style={pageHeader}>
