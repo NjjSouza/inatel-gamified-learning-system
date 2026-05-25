@@ -34,45 +34,46 @@ export function useClasses() {
     });
   };
 
-  const enrollByMatricula = async (classId, matricula) => {
-    if (!matricula) throw new Error("Matrícula inválida");
+const enrollByMatricula = async (classId, matricula, nomeHint = "") => {
+  if (!matricula) throw new Error("Matrícula inválida");
 
-    const existing = await getDocs(query(
-      collection(db, "enrollments"),
-      where("classId", "==", classId),
-      where("matricula", "==", matricula)
-    ));
-    if (!existing.empty) throw new Error("Aluno já matriculado nesta turma");
+  const existing = await getDocs(query(
+    collection(db, "enrollments"),
+    where("classId", "==", classId),
+    where("matricula", "==", matricula)
+  ));
+  if (!existing.empty) throw new Error("Aluno já matriculado nesta turma");
 
-    const userSnap = await getDocs(query(
-      collection(db, "usuarios"),
-      where("matricula", "==", matricula)
-    ));
+  const userSnap = await getDocs(query(
+    collection(db, "usuarios"),
+    where("matricula", "==", matricula)
+  ));
 
-    if (!userSnap.empty) {
-      const alunoDoc = userSnap.docs[0];
-      if (alunoDoc.data().tipo !== "aluno") {
-        throw new Error("Esse usuário não é um aluno");
-      }
-      await addDoc(collection(db, "enrollments"), {
-        classId,
-        matricula,
-        email: alunoDoc.data().email || "",
-        userId: alunoDoc.id,
-        nome: alunoDoc.data().nome || "",
-        enrolledAt: new Date(),
-      });
-    } else {
-      await addDoc(collection(db, "enrollments"), {
-        classId,
-        matricula,
-        email: "",
-        userId: null,
-        nome: "",
-        enrolledAt: new Date(),
-      });
+  if (!userSnap.empty) {
+    const alunoDoc = userSnap.docs[0];
+    if (alunoDoc.data().tipo !== "aluno") {
+      throw new Error("Esse usuário não é um aluno");
     }
-  };
+    await addDoc(collection(db, "enrollments"), {
+      classId,
+      matricula,
+      email: alunoDoc.data().email || "",
+      userId: alunoDoc.id,
+      
+      nome: alunoDoc.data().nome || nomeHint || "",
+      enrolledAt: new Date(),
+    });
+  } else {
+    await addDoc(collection(db, "enrollments"), {
+      classId,
+      matricula,
+      email: "",
+      userId: null,
+      nome: nomeHint || "",
+      enrolledAt: new Date(),
+    });
+  }
+};
 
   const getEnrollments = async (classId) => {
     const q = query(

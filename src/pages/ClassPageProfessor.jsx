@@ -8,6 +8,7 @@ import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
 import TwemojiImg from "../components/TwemojiImg";
 import { getNivel, NIVEIS } from "../utils/niveis";
+import ImportarAlunos from "../components/ImportarAlunos";
 
 // Timer ativo
 function SessionTimer({ sessionId }) {
@@ -46,6 +47,7 @@ export default function ClassPageProfessor() {
   const [respondidosPorSessao, setRespondidosPorSessao] = useState({});
   const [enrollments, setEnrollments] = useState([]);
   const [enrollMatricula, setEnrollMatricula] = useState("");
+  const [enrollNome, setEnrollNome] = useState("");
   const [expandedSession, setExpandedSession] = useState(null);
   const [quizTemAberta, setQuizTemAberta]     = useState({});
   const [pendentePorSessao, setPendentePorSessao] = useState({});
@@ -158,10 +160,10 @@ export default function ClassPageProfessor() {
     if (!enrollMatricula.trim()) {
       return alert("Digite a matrícula do aluno");
     }
-
     try {
-      await enrollByMatricula(classId, enrollMatricula.trim());
+      await enrollByMatricula(classId, enrollMatricula.trim(), enrollNome.trim());
       setEnrollMatricula("");
+      setEnrollNome("");
       setEnrollments(await getEnrollments(classId));
       alert("Aluno matriculado!");
     } catch (e) {
@@ -450,7 +452,6 @@ export default function ClassPageProfessor() {
                   </div>
                 </div>
 
-                {/* Se pendente, mostra também o atalho para corrigir */}
                 {temPendente && (
                   <div style={{ marginTop: "10px", display: "flex", justifyContent: "flex-end" }}>
                     <button
@@ -482,18 +483,36 @@ export default function ClassPageProfessor() {
           )}
         </div>
 
+        {/* Importação por planilha + cadastro manual */}
         {classData.status === "active" && (
-          <div style={{ display: "flex", gap: "8px", marginBottom: "20px", justifyContent: "center" }}>
-            <input
-              value={enrollMatricula}
-              onChange={e => setEnrollMatricula(e.target.value)}
-placeholder="Matrícula do aluno"
-              style={{ ...inputStyle, flex: 1 }}
+          <div style={{ marginBottom: "20px" }}>
+            <ImportarAlunos
+              classId={classId}
+              onImportado={async () => setEnrollments(await getEnrollments(classId))}
             />
-            <button onClick={handleEnroll} style={buttonPrimary}>Adicionar aluno</button>
+            <div style={separadorOu}>
+              <div style={separadorLinha} />
+              <span style={separadorTexto}>ou adicionar manualmente</span>
+              <div style={separadorLinha} />
+            </div>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+              <input
+                value={enrollMatricula}
+                onChange={e => setEnrollMatricula(e.target.value)}
+                placeholder="Matrícula do aluno"
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <input
+                value={enrollNome}
+                onChange={e => setEnrollNome(e.target.value)}
+                placeholder="Nome (opcional)"
+                style={{ ...inputStyle, flex: 1, minWidth: "160px" }}
+              />
+                <button onClick={handleEnroll} style={buttonPrimary}>Adicionar aluno</button>
+              </div>
           </div>
         )}
-
+        
         {alunosOrdenados.length === 0 ? (
           <p style={{ color: "var(--texto-suave)" }}>Nenhum aluno cadastrado nesta turma ainda.</p>
         ) : (
@@ -521,18 +540,10 @@ placeholder="Matrícula do aluno"
                       </td>
                     )}
                     <td style={tdStyle}>{e.nome || "-"}</td>
-                    <td style={{
-                      ...tdStyle,
-                      fontSize: "13px",
-                      color: "var(--texto-suave)"
-                    }}>
+                    <td style={{ ...tdStyle, fontSize: "13px", color: "var(--texto-suave)" }}>
                       {e.email || "-"}
                     </td>
-                    <td style={{
-                      ...tdStyle,
-                      fontWeight: "600",
-                      color: "var(--texto)"
-                    }}>
+                    <td style={{ ...tdStyle, fontWeight: "600", color: "var(--texto)" }}>
                       {e.matricula || "-"}
                     </td>
                     <td style={tdStyle}>
@@ -705,4 +716,15 @@ const xpBadge = {
   background: "var(--cor-primaria-claro)", color: "var(--cor-primaria-texto)",
   padding: "2px 8px", borderRadius: "10px",
   display: "inline-flex", alignItems: "center", gap: "3px",
+};
+const separadorOu = {
+  display: "flex", alignItems: "center",
+  gap: "12px", margin: "18px 0",
+};
+const separadorLinha = {
+  flex: 1, height: "1px", background: "var(--borda)",
+};
+const separadorTexto = {
+  fontSize: "12px", color: "var(--texto-muito-suave)",
+  whiteSpace: "nowrap", fontWeight: "600",
 };
