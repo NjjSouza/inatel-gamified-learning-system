@@ -1,7 +1,7 @@
 import { db } from "../services/firebase";
 import {
   collection, doc, addDoc, updateDoc, query, where,
-  onSnapshot, getDoc, getDocs, setDoc, increment, deleteDoc
+  onSnapshot, getDoc, getDocs, setDoc, increment, deleteDoc, arrayUnion
 } from "firebase/firestore";
 import { useAuth } from "../contexts/AuthContext";
 import { useQuizzes } from "./useQuizzes";
@@ -426,6 +426,39 @@ export function useSessions() {
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   };
 
+  // Gera/renova o token de check-in (chamada pelo professor)
+const refreshCheckinToken = async (sessionId) => {
+  const token = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 30_000);
+  await updateDoc(doc(db, "sessions", sessionId), {
+    checkinToken: token,
+    checkinTokenExpiresAt: expiresAt,
+    checkinTokenUsedBy: [], // reseta os "já usaram" a cada ciclo
+  });
+};
+
+// Valida e consome o token (chamada pelo aluno)
+const joinSessionWithToken = async (sessionId, token) => {
+  const sessionSnap = await getDoc(doc(db, "sessions", sessionId));
+  const data = sessionSnap.data();
+
+  const agora = new Date();
+  const expira = data.checkinTokenExpiresAt?.toDate?.();
+
+  if (data.checkinToken !== token)       throw new Error("QR Code inválido.");
+  if (!expira || agora > expira)         throw new Error("QR Code expirado. Escaneie o atual.");
+  if (data.checkinTokenUsedBy?.includes(user.uid))
+                                         throw new Error("Você já registrou presença.");
+  if (data.status === "finished")        throw new Error("Esta sessão já foi encerrada.");
+
+  // Marca como usado antes de joinSession (evita corrida)
+  await updateDoc(doc(db, "sessions", sessionId), {
+    checkinTokenUsedBy: arrayUnion(user.uid),
+  });
+
+  await joinSession(sessionId);
+};
+
   return {
     createSession,
     getSessionByPin,
@@ -443,5 +476,7 @@ export function useSessions() {
     gradeOpenAnswer,
     gradeOpenAnswersBatch,
     getOpenAnswersForSession,
+    refreshCheckinToken,
+    joinSessionWithToken,
   };
 }

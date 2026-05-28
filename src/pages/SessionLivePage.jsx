@@ -4,6 +4,7 @@ import { doc, onSnapshot, collection, query, where, getDocs } from "firebase/fir
 import { db } from "../services/firebase";
 import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
+import QRCodeLib from "react-qr-code";
 import TwemojiImg from "../components/TwemojiImg";
 import Spinner from "../components/Spinner";
 
@@ -33,12 +34,14 @@ export default function SessionLivePage() {
   const navigate      = useNavigate();
   const { finishSession, nextQuestion } = useSessions();
   const { getQuizzes, getQuestions }    = useQuizzes();
-
+  const { refreshCheckinToken } = useSessions();
   const [session, setSession]               = useState(null);
   const [players, setPlayers]               = useState([]);
   const [quizNome, setQuizNome]             = useState("");
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [tokenExpiraEm, setTokenExpiraEm] = useState(30);
+  const QRCode = QRCodeLib.default ?? QRCodeLib;
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "sessions", sessionId), (snap) => {
@@ -75,6 +78,24 @@ export default function SessionLivePage() {
   useEffect(() => {
     if (session?.status === "finished") navigate(-1);
   }, [session?.status]);
+
+  // Gera token inicial e renova a cada 30s
+  useEffect(() => {
+    if (session?.status !== "playing") return;
+
+    refreshCheckinToken(sessionId);        // gera imediatamente
+
+    const intervalo = setInterval(() => {
+      refreshCheckinToken(sessionId);
+      setTokenExpiraEm(30);
+    }, 30_000);
+
+    const contador = setInterval(() => {
+      setTokenExpiraEm(s => (s > 0 ? s - 1 : 30));
+    }, 1_000);
+
+    return () => { clearInterval(intervalo); clearInterval(contador); };
+  }, [session?.status, sessionId]);
 
   const handleNext = useCallback(async () => {
     const currentIndex = session?.currentQuestionIndex ?? 0;
@@ -144,6 +165,23 @@ export default function SessionLivePage() {
           <div style={barraPreenchida(pctRespondidos)} />
         </div>
       </div>
+
+      {/* QR Code — abaixo do progresso */}
+      {session.checkinToken && session.status === "playing" && (
+        <div style={qrSection}>
+          <div style={qrContainer}>
+            <QRCode
+              value={`${window.location.origin}/entrar?token=${session.checkinToken}&sessao=${sessionId}`}
+              size={160}
+              bgColor="var(--bg-card)"
+              fgColor="var(--texto)"
+            />
+            <p style={qrContador}>
+              Novo QR Code em <strong>{tokenExpiraEm}s</strong>
+            </p>
+          </div>
+        </div>
+      )} 
 
       {/* Lista de alunos */}
       <div style={listWrap}>
@@ -308,4 +346,21 @@ const buttonPerigo = {
   padding: "12px 24px", borderRadius: "8px", border: "none",
   background: "var(--cor-perigo)", color: "#fff",
   fontSize: "15px", fontWeight: "bold", cursor: "pointer",
+};
+const qrSection = {
+  maxWidth: "700px", margin: "16px auto 0",
+  padding: "0 20px", width: "100%",
+  display: "flex", justifyContent: "center",
+};
+
+const qrContainer = {
+  display: "flex", flexDirection: "row",
+  alignItems: "center", gap: "16px",
+  background: "var(--bg-card)", padding: "16px 24px",
+  borderRadius: "12px", border: "1px solid var(--borda)",
+  width: "100%",
+};
+
+const qrContador = {
+  fontSize: "14px", color: "var(--texto-suave)", margin: 0,
 };

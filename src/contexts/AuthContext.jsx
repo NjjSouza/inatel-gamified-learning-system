@@ -27,17 +27,17 @@ export function AuthProvider({ children }) {
           };
           setUser(userData);
 
-          if (userData.tipo === "aluno") {
+          if (userData.tipo === "aluno" && userData.matricula) {
             const pendentes = await getDocs(query(
               collection(db, "enrollments"),
-              where("matricula", "==", userData.matricula), // matrícula se torna identificador principal do enrollment
+              where("matricula", "==", userData.matricula),
               where("userId", "==", null)
             ));
             const updates = pendentes.docs.map((d) =>
               updateDoc(doc(db, "enrollments", d.id), {
                 userId: firebaseUser.uid,
                 nome: userData.nome || "",
-                email: firebaseUser.email || "",  // preenche o email no primeiro acesso
+                email: firebaseUser.email || "",
               })
             );
             await Promise.all(updates);

@@ -21,8 +21,22 @@ function Login() {
   };
 
   useEffect(() => {
-    if (user?.tipo === "professor") navigate("/professor");
-    else if (user?.tipo === "aluno") navigate("/aluno");
+    if (!user) return;
+
+    const destino = sessionStorage.getItem("redirectAfterLogin");
+    if (destino) {
+      sessionStorage.removeItem("redirectAfterLogin");
+
+      // Só aluno pode ir para /entrar ou /aluno/...
+      const ehRotaAluno = destino.startsWith("/entrar") || destino.startsWith("/aluno");
+      if (user.tipo === "aluno" || !ehRotaAluno) {
+        navigate(destino, { replace: true });
+        return;
+      }
+    }
+
+    if (user.tipo === "professor") navigate("/professor");
+    else if (user.tipo === "aluno") navigate("/aluno");
   }, [user]);
 
   return (

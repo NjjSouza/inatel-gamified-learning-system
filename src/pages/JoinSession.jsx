@@ -1,26 +1,51 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSessions } from "../hooks/useSessions";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function JoinSession() {
-  const { getSessionByPin, joinSession } = useSessions();
+  const { user } = useAuth();
+  const { getSessionByPin, joinSession, joinSessionWithToken } = useSessions();
   const navigate = useNavigate();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const tokenUrl  = searchParams.get("token");
+    const sessaoUrl = searchParams.get("sessao");
+    // Aguarda o usuário estar carregado antes de executar
+    if (tokenUrl && sessaoUrl && user) {
+      handleJoinWithToken(tokenUrl, sessaoUrl);
+    }
+  }, [user]); // depende de user, não só no mount
+
+  const handleJoinWithToken = async (tokenUrl, sessaoUrl) => {
+    setError("");
+    setLoading(true);
+    try {
+      await joinSessionWithToken(sessaoUrl, tokenUrl);
+      navigate(`/aluno/sessao/${sessaoUrl}`);
+    } catch (e) {
+      setError(e.message || "Algo deu errado.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleJoin = async () => {
     setError("");
     setLoading(true);
     try {
       const session = await getSessionByPin(pin.trim());
-      if (!session) { setError("Código inválido ou sessão não encontrada."); return; }
-      if (session.status === "finished") { setError("Esta sessão já foi encerrada pelo professor."); return; }
+      if (!session)                      { setError("Código inválido."); return; }
+      if (session.status === "finished") { setError("Sessão já encerrada."); return; }
       await joinSession(session.id);
       navigate(`/aluno/sessao/${session.id}`);
-    } catch {
-      setError("Algo deu errado. Tente novamente.");
+    } catch (e) {
+      setError(e.message || "Algo deu errado.");
     } finally {
       setLoading(false);
     }
@@ -45,7 +70,11 @@ export default function JoinSession() {
           style={inputStyle}
         />
 
-        <button onClick={handleJoin} disabled={loading} style={{ ...buttonPrimary, opacity: loading ? 0.7 : 1 }}>
+        <button
+          onClick={handleJoin}
+          disabled={loading}
+          style={{ ...buttonPrimary, opacity: loading ? 0.7 : 1 }}
+        >
           {loading ? "Verificando..." : "Confirmar"}
         </button>
 
@@ -66,7 +95,7 @@ const card = {
   boxShadow: "var(--sombra-card)", border: "1px solid var(--borda)",
   textAlign: "center",
 };
-const title = { margin: "16px 0 8px", fontSize: "22px", color: "var(--texto)" };
+const title    = { margin: "16px 0 8px", fontSize: "22px", color: "var(--texto)" };
 const subtitle = { margin: "0 0 24px", fontSize: "14px", color: "var(--texto-muito-suave)" };
 const inputStyle = {
   width: "100%", padding: "12px", marginBottom: "12px",

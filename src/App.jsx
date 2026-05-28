@@ -70,45 +70,46 @@ function AppLayout() {
           <Route path="/registrar" element={<Register />} />
 
           <Route path="/aluno" element={
-            <ProtectedRoute><DashboardAluno /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["aluno"]}><DashboardAluno /></ProtectedRoute>
           } />
           <Route path="/aluno/curso/:courseId" element={
-            <ProtectedRoute><CoursePageAluno /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["aluno"]}><CoursePageAluno /></ProtectedRoute>
           } />
           <Route path="/aluno/sessao/:sessionId" element={
-            <ProtectedRoute><SessionPlayer /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["aluno"]}><SessionPlayer /></ProtectedRoute>
           } />
           <Route path="/aluno/perfil" element={
-            <ProtectedRoute><ProfileAluno /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["aluno"]}><ProfileAluno /></ProtectedRoute>
           } />
 
+          {/* /entrar: exclusivo para alunos; preserva ?token= e ?sessao= no redirect */}
           <Route path="/entrar" element={
-            <ProtectedRoute><JoinSession /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["aluno"]}><JoinSession /></ProtectedRoute>
           } />
 
           <Route path="/professor" element={
-            <ProtectedRoute><DashboardProfessor /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["professor"]}><DashboardProfessor /></ProtectedRoute>
           } />
           <Route path="/professor/curso/:courseId" element={
-            <ProtectedRoute><CoursePageProfessor /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["professor"]}><CoursePageProfessor /></ProtectedRoute>
           } />
           <Route path="/professor/curso/:courseId/turma/:classId" element={
-            <ProtectedRoute><ClassPageProfessor /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["professor"]}><ClassPageProfessor /></ProtectedRoute>
           } />
           <Route path="/professor/curso/:courseId/turma/:classId/respostas-abertas/:sessionId" element={
-            <ProtectedRoute><OpenAnswersHistory /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["professor"]}><OpenAnswersHistory /></ProtectedRoute>
           } />
           <Route path="/professor/quiz/:quizId" element={
-            <ProtectedRoute><EditQuiz /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["professor"]}><EditQuiz /></ProtectedRoute>
           } />
           <Route path="/professor/sessao/:sessionId" element={
-            <ProtectedRoute><SessionLivePage /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["professor"]}><SessionLivePage /></ProtectedRoute>
           } />
           <Route path="/professor/sessao/:sessionId/corrigir" element={
-            <ProtectedRoute><CorrectOpenAnswers /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["professor"]}><CorrectOpenAnswers /></ProtectedRoute>
           } />
           <Route path="/professor/perfil" element={
-            <ProtectedRoute><ProfileProfessor /></ProtectedRoute>
+            <ProtectedRoute allowedTipos={["professor"]}><ProfileProfessor /></ProtectedRoute>
           } />
         </Routes>
       </div>
