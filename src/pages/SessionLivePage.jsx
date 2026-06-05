@@ -166,7 +166,7 @@ export default function SessionLivePage() {
         </div>
       </div>
 
-      {/* QR Code — abaixo do progresso */}
+      {/* QR Code - abaixo do progresso */}
       {session.checkinToken && session.status === "playing" && (
         <div style={qrSection}>
           <div style={qrContainer}>

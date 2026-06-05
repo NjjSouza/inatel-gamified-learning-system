@@ -153,5 +153,33 @@ service cloud.firestore {
       );
       allow delete: if false;
     }
+
+    // Lojas
+    match /shops/{shopId} {
+      allow read: if isAuthenticated();
+      allow create: if isProfessor();
+      allow update: if isAuthenticated() &&
+        resource.data.professorId == request.auth.uid;
+      allow delete: if false;
+    }
+  
+    // Itens da loja
+    match /shop_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && (
+        isProfessor() ||
+        get(/databases/$(database)/documents/shops/$(resource.data.shopId))
+          .data.professorId == request.auth.uid
+      );
+      allow delete: if false;
+    }
+  
+    // Compras
+    match /shop_purchases/{purchaseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
   }
 }

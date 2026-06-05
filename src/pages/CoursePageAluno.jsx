@@ -5,10 +5,11 @@ import { useClasses } from "../hooks/useClasses";
 import { useAuth } from "../contexts/AuthContext";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { getNivel } from "../utils/niveis";
 import Spinner from "../components/Spinner";
 import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
-import { getNivel } from "../utils/niveis";
+import ShopPageAluno from "../pages/ShopPageAluno";
 
 const NIVEL_CODEPOINTS = {
   "Pedra":    "1faa8",
@@ -97,6 +98,7 @@ export default function CoursePageAluno() {
   const [course, setCourse]       = useState(null);
   const [professor, setProfessor] = useState(null);
   const [loading, setLoading]     = useState(true);
+  const [classIdAluno, setClassIdAluno] = useState(null);
 
   const [stats, setStats] = useState({
     totalSessoes: 0,
@@ -144,6 +146,8 @@ export default function CoursePageAluno() {
       const todasSessoes = sessionsSnap.docs
         .filter(d => classIds.includes(d.data().classId))
         .map(d => ({ id: d.id, ...d.data() }));
+
+      if (classIds.length > 0) setClassIdAluno(classIds[0]);
 
       const sessoesEncerradas = todasSessoes.filter(s => s.status === "finished");
       const sessionIds        = todasSessoes.map(s => s.id);
@@ -346,6 +350,13 @@ export default function CoursePageAluno() {
           </>
         )}
       </div>
+
+      {/* Loja de benefícios */}
+      {classIdAluno && (
+        <div style={card}>
+          <ShopPageAluno classId={classIdAluno} />
+        </div>
+      )}
 
       {/* Histórico de XP */}
       {historicoXp.length > 0 && (

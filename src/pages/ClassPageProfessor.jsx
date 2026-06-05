@@ -5,10 +5,11 @@ import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { getNivel, NIVEIS } from "../utils/niveis";
 import Spinner from "../components/Spinner";
 import TwemojiImg from "../components/TwemojiImg";
-import { getNivel, NIVEIS } from "../utils/niveis";
 import ImportarAlunos from "../components/ImportarAlunos";
+import ShopPageProfessor from "../pages/ShopPageProfessor";
 
 // Timer ativo
 function SessionTimer({ sessionId }) {
@@ -465,6 +466,13 @@ export default function ClassPageProfessor() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Loja de benefícios */}
+      {classData.status === "active" && (
+        <div style={card}>
+          <ShopPageProfessor classId={classId} courseId={courseId} />
         </div>
       )}
 
