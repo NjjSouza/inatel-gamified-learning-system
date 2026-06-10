@@ -1,9 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useState } from "react";
-
 import { useAuth } from "./contexts/AuthContext";
 import { useIsMobile } from "./hooks/useIsMobile";
-
 import Navbar from "./components/Navbar";
 import ProfessorSidebar, { SIDEBAR_WIDTH } from "./components/ProfessorSidebar";
 

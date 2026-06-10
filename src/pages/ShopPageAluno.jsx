@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useShop } from "../hooks/useShop";
 import Spinner from "../components/Spinner";
+import CoinLottie from "../components/CoinLottie";
 
 /**
  * ShopPageAluno - vitrine de benefícios de uma turma.
@@ -73,7 +74,7 @@ export default function ShopPageAluno({ classId }) {
           <h2 style={titulo}>Loja de Benefícios</h2>
         </div>
         <div style={lojaFechadaCard}>
-          <span style={{ fontSize: "40px", display: "block", marginBottom: "12px" }}>🔒</span>
+          <span style={{ fontSize: "40px", display: "block", marginBottom: "12px" }}>🔒︎</span>
           <p style={{ fontWeight: "bold", color: "var(--texto)", fontSize: "15px", margin: "0 0 4px" }}>
             Loja fechada
           </p>
@@ -98,7 +99,7 @@ export default function ShopPageAluno({ classId }) {
         </div>
         {/* Saldo */}
         <div style={saldoBox}>
-          <span style={{ fontSize: "20px" }}>💰</span>
+          <CoinLottie size={28} animated />
           <span style={saldoNum}>{saldo}</span>
           <span style={{ fontSize: "13px", color: "var(--texto-suave)" }}>
             moeda{saldo !== 1 ? "s" : ""} disponíveis
@@ -125,7 +126,7 @@ export default function ShopPageAluno({ classId }) {
               <div key={item.id} style={itemCard(false, semSaldo)}>
                 <div style={itemTop}>
                   <span style={itemNome}>{item.nome}</span>
-                  <span style={precoBadge}>💰 {item.preco}</span>
+                  <span style={precoBadge}><CoinLottie size={16} /> {item.preco}</span>
                 </div>
                 {item.descricao && (
                   <p style={itemDesc}>{item.descricao}</p>
@@ -163,7 +164,7 @@ export default function ShopPageAluno({ classId }) {
               <div key={item.id} style={itemCard(true, false)}>
                 <div style={itemTop}>
                   <span style={{ ...itemNome, color: "var(--cor-primaria)" }}>{item.nome}</span>
-                  <span style={precoBadge}>💰 {item.preco}</span>
+                  <span style={precoBadge}><CoinLottie size={16} /> {item.preco}</span>
                 </div>
                 {item.descricao && <p style={itemDesc}>{item.descricao}</p>}
                 <div style={compradoBadge}>
@@ -177,7 +178,7 @@ export default function ShopPageAluno({ classId }) {
 
       {/* Aviso de recompra */}
       <p style={aviso}>
-        Cada benefício pode ser comprado uma vez por loja. O professor abrirá uma nova loja para a próxima prova.
+        Cada benefício pode ser comprado apenas uma vez por loja. Lojas novas são abertas próximas às datas de prova.
       </p>
     </div>
   );
@@ -252,6 +253,7 @@ const precoBadge = {
   background: "#fff8e1", color: "#e65100",
   padding: "3px 8px", borderRadius: "10px",
   border: "1px solid #ffe0b2", flexShrink: 0,
+  display: "inline-flex", alignItems: "center", gap: "4px",
 };
 
 const itemDesc = {

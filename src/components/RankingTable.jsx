@@ -12,7 +12,11 @@ const NIVEL_CODEPOINTS = {
 export default function RankingTable({ players, highlightUserId, showNivel = false }) {
   if (!players || players.length === 0) return null;
 
-  const medalhas = ["1f947", "1f948", "1f949"];
+  const MEDALHAS_LOTTIE = [
+    "https://lottie.host/2343a230-9b99-40c3-a285-9b203bb7e56d/aI7UINriXI.lottie",
+    "https://lottie.host/7fe34abf-14f7-4faa-a8f5-099531a4963f/GYVoESveyq.lottie",
+    "https://lottie.host/b368509d-ba63-4d17-b951-718550f790e3/TJZWo4dVAg.lottie",
+  ];
 
   return (
     <div>
@@ -45,7 +49,12 @@ export default function RankingTable({ players, highlightUserId, showNivel = fal
               }}>
                 <td style={tdStyle}>
                   {i < 3
-                    ? <TwemojiImg codepoint={medalhas[i]} size={22} alt={`${i+1}º lugar`} />
+                    ? <DotLottieReact
+                      src={MEDALHAS_LOTTIE[i]}
+                      autoplay
+                      loop
+                      style={{ width: 20, height: 20, display: "inline-block" }}
+                      />
                     : i + 1
                   }
                 </td>

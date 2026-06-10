@@ -10,6 +10,8 @@ import Spinner from "../components/Spinner";
 import RankingTable from "../components/RankingTable";
 import TwemojiImg from "../components/TwemojiImg";
 import ShopPageAluno from "../pages/ShopPageAluno";
+import { useShop } from "../hooks/useShop";
+import CoinLottie from "../components/CoinLottie";
 
 const NIVEL_CODEPOINTS = {
   "Pedra":    "1faa8",
@@ -22,14 +24,8 @@ const NIVEL_CODEPOINTS = {
 /**
  * Agrupa entradas do histórico de XP por sessão para múltipla escolha,
  * mantendo presença e questões abertas como entradas individuais.
- 
- * xpMaxPorSessao: { [sessionId]: number } - XP máximo possível de questões
- * fechadas naquela sessão (para exibir a fração correta no histórico).
- 
- * xpMaxPorResposta: { [answerId]: number } - XP máximo de cada questão aberta
- * (para exibir "7/10 XP" em vez de só "7 XP").
  */
-function agruparHistoricoXp(entries, xpMaxPorSessao = {}, xpMaxPorResposta = {}) {
+function agruparHistoricoGanhos(entries, xpMaxPorSessao = {}, xpMaxPorResposta = {}) {
   const resultado = [];
   const multipla  = {};
 
@@ -49,7 +45,6 @@ function agruparHistoricoXp(entries, xpMaxPorSessao = {}, xpMaxPorResposta = {})
       multipla[e.sessionId].amount  += e.amount || 0;
       multipla[e.sessionId].acertos += 1;
     } else if (e.reason === "open_answer_graded") {
-      // Enriquecer com o xpMax da questão aberta correspondente
       resultado.push({
         ...e,
         xpMax: xpMaxPorResposta[e.questionId] ?? null,
@@ -72,7 +67,7 @@ function agruparHistoricoXp(entries, xpMaxPorSessao = {}, xpMaxPorResposta = {})
   return resultado;
 }
 
-function origemAgrupado(entry) {
+function origemGanho(entry) {
   if (entry.reason === "presence")            return "Presença no quiz";
   if (entry.reason === "correct_answer_sum")  return `Múltipla escolha - ${entry.acertos} acerto${entry.acertos !== 1 ? "s" : ""}`;
   if (entry.reason === "open_answer_graded")  return "Questão aberta (corrigida pelo professor)";
@@ -94,6 +89,7 @@ export default function CoursePageAluno() {
   const { user }     = useAuth();
   const { getCourseById }      = useCourses();
   const { getEnrolledClassIds } = useClasses();
+  const { getCoinBalance }     = useShop();
 
   const [course, setCourse]       = useState(null);
   const [professor, setProfessor] = useState(null);
@@ -113,8 +109,12 @@ export default function CoursePageAluno() {
     totalPossivel:    0,
   });
 
-  const [ranking, setRanking]         = useState([]);
-  const [historicoXp, setHistoricoXp] = useState([]);
+  const [ranking, setRanking]             = useState([]);
+  // Histórico unificado de ganhos (XP = moedas ganhas)
+  const [historicoGanhos, setHistoricoGanhos] = useState([]);
+  // Histórico só de gastos de moedas (compras)
+  const [historicoGastos, setHistoricoGastos] = useState([]);
+  const [saldoMoedas, setSaldoMoedas]         = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -152,46 +152,32 @@ export default function CoursePageAluno() {
       const sessoesEncerradas = todasSessoes.filter(s => s.status === "finished");
       const sessionIds        = todasSessoes.map(s => s.id);
 
-      // Questões de cada quiz (cache)
-      // Precisamos delas para:
-      //   a) calcular o xpMax por sessão (múltipla escolha)
-      //   b) calcular o xpMax por questão aberta
-      const questoesPorQuiz = {};   // { [quizId]: Question[] }
-      const quizIdsPorSessao = {};  // { [sessionId]: quizId }
+      // Cache de questões por quiz
+      const questoesPorQuiz  = {};
+      const xpMaxPorSessao   = {};
+      const xpMaxPorResposta = {};
 
       for (const s of sessoesEncerradas) {
-        quizIdsPorSessao[s.id] = s.quizId;
         if (!questoesPorQuiz[s.quizId]) {
           const snap = await getDocs(collection(db, "quizzes", s.quizId, "questions"));
           questoesPorQuiz[s.quizId] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
-      }
-
-      // xpMax de questões FECHADAS por sessão
-      const xpMaxPorSessao = {};
-      for (const s of sessoesEncerradas) {
         const questoes = questoesPorQuiz[s.quizId] ?? [];
         xpMaxPorSessao[s.id] = questoes
           .filter(q => q.tipo !== "aberta")
           .reduce((acc, q) => acc + (q.xp ?? 10), 0);
-      }
-
-      // xpMax por questionId (questões abertas)
-      const xpMaxPorResposta = {};  // { [questionId]: number }
-      for (const questoes of Object.values(questoesPorQuiz)) {
         for (const q of questoes) {
           if (q.tipo === "aberta") xpMaxPorResposta[q.id] = q.xp ?? 10;
         }
       }
 
-      // XP do aluno
+      // XP do aluno (= ganhos de moedas também)
       const xpSnap = await getDocs(query(
         collection(db, "xp"),
         where("userId", "==", user.uid),
         where("classId", "in", classIds)
       ));
       const totalXP = xpSnap.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
-
       const historicoBruto = xpSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => {
@@ -199,10 +185,28 @@ export default function CoursePageAluno() {
           const tb = b.createdAt?.toDate?.() ?? new Date(0);
           return tb - ta;
         });
+      setHistoricoGanhos(agruparHistoricoGanhos(historicoBruto, xpMaxPorSessao, xpMaxPorResposta));
 
-      setHistoricoXp(agruparHistoricoXp(historicoBruto, xpMaxPorSessao, xpMaxPorResposta));
+      // Gastos de moedas (compras na loja)
+      const purchasesSnap = await getDocs(query(
+        collection(db, "shop_purchases"),
+        where("userId", "==", user.uid),
+        where("classId", "in", classIds)
+      ));
+      const gastos = purchasesSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const ta = a.purchasedAt?.toDate?.() ?? a.purchasedAt?.toMillis ? new Date(a.purchasedAt.toMillis()) : new Date(0);
+          const tb = b.purchasedAt?.toDate?.() ?? b.purchasedAt?.toMillis ? new Date(b.purchasedAt.toMillis()) : new Date(0);
+          return tb - ta;
+        });
+      setHistoricoGastos(gastos);
 
-      // Respostas do aluno 
+      // Saldo atual via coin_balance (fonte de verdade)
+      const saldo = await getCoinBalance(classIds[0]);
+      setSaldoMoedas(saldo);
+
+      // Respostas
       let sessoesParticipadas = 0;
       let totalRespostas = 0;
       let totalAcertos   = 0;
@@ -227,11 +231,11 @@ export default function CoursePageAluno() {
         collection(db, "xp"), where("classId", "in", classIds)
       ));
 
-      let xpPossivelTotal      = 0;
+      let xpPossivelTotal       = 0;
       let questoesPossivelTotal = 0;
 
       for (const sessao of sessoesEncerradas) {
-        xpPossivelTotal += 10; // presença
+        xpPossivelTotal += 10;
         const questoes = questoesPorQuiz[sessao.quizId] ?? [];
         questoes.forEach(d => {
           xpPossivelTotal       += d.xp ?? 10;
@@ -291,6 +295,8 @@ export default function CoursePageAluno() {
     ? Math.round((stats.totalSessoes / comparativos.sessoesAplicadas) * 100) : 0;
   const pctQuestoes = comparativos.totalPossivel > 0
     ? Math.round((stats.totalAcertos / comparativos.totalPossivel) * 100) : 0;
+
+  const totalGasto = historicoGastos.reduce((sum, g) => sum + (g.itemPreco || 0), 0);
 
   return (
     <div style={container}>
@@ -358,23 +364,32 @@ export default function CoursePageAluno() {
         </div>
       )}
 
-      {/* Histórico de XP */}
-      {historicoXp.length > 0 && (
+      {/* Histórico de Ganhos (XP e moedas ganhas - sempre iguais) */}
+      {historicoGanhos.length > 0 && (
         <div style={card}>
-          <h2>Histórico de XP</h2>
-          <p style={{ fontSize: "13px", color: "var(--texto-suave)", marginBottom: "16px" }}>
-            Registro de todos os XPs recebidos nesta disciplina.
-          </p>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={historicoHeader}>
+            <div>
+              <h2 style={{ margin: 0 }}>Histórico de Ganhos</h2>
+              <p style={{ fontSize: "13px", color: "var(--texto-suave)", marginTop: "4px", marginBottom: 0 }}>
+                Sempre que você adquire XP, adquire a mesma quantidade em moedas!
+              </p>
+            </div>
+            <div style={totalGanhosBox}>
+              <span style={totalGanhosNum}>{stats.totalXP}</span>
+              <span style={{ fontSize: "12px", color: "var(--texto-suave)" }}>XP acumulado</span>
+            </div>
+          </div>
+
+          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "16px" }}>
             <thead>
               <tr>
                 <th style={thStyle}>Data</th>
                 <th style={thStyle}>Origem</th>
-                <th style={thStyle}>XP</th>
+                <th style={thStyle}>XP / Moedas</th>
               </tr>
             </thead>
             <tbody>
-              {historicoXp.map(entry => (
+              {historicoGanhos.map(entry => (
                 <tr key={entry.id} style={{ borderBottom: "1px solid var(--borda)" }}>
                   <td style={tdStyle}>
                     {entry.createdAt?.toDate
@@ -385,10 +400,10 @@ export default function CoursePageAluno() {
                       : "-"}
                   </td>
                   <td style={{ ...tdStyle, textAlign: "left", fontSize: "13px" }}>
-                    {origemAgrupado(entry)}
+                    {origemGanho(entry)}
                   </td>
                   <td style={tdStyle}>
-                    <span style={entry.amount > 0 ? xpBadge : xpBadgeZero}>
+                    <span style={entry.amount > 0 ? ganhoBadge : ganhoBadgeZero}>
                       {formatarXp(entry)}
                     </span>
                   </td>
@@ -396,9 +411,77 @@ export default function CoursePageAluno() {
               ))}
             </tbody>
           </table>
-          <p style={{ fontSize: "12px", color: "var(--texto-muito-suave)", marginTop: "12px", textAlign: "right" }}>
-            Total: <strong>{stats.totalXP} XP</strong>
-          </p>
+        </div>
+      )}
+
+      {/* Histórico de Gastos de Moedas */}
+      {(historicoGastos.length > 0 || saldoMoedas > 0) && (
+        <div style={card}>
+          <div style={historicoHeader}>
+            <div>
+              <h2 style={{ margin: 0 }}>Uso de Moedas</h2>
+              <p style={{ fontSize: "13px", color: "var(--texto-suave)", marginTop: "4px", marginBottom: 0 }}>
+                Benefícios resgatados na loja
+              </p>
+            </div>
+            <div style={saldoBox}>
+              <span style={{ fontSize: "20px" }}> <CoinLottie size={28} animated /> </span>
+              <span style={saldoNum}>{saldoMoedas}</span>
+              <span style={{ fontSize: "13px", color: "var(--texto-suave)" }}>
+                disponíve{saldoMoedas !== 1 ? "is" : "l"}
+              </span>
+            </div>
+          </div>
+
+          {historicoGastos.length === 0 ? (
+            <p style={{ fontSize: "13px", color: "var(--texto-suave)", marginTop: "16px" }}>
+              Você ainda não resgatou nenhum benefício.
+            </p>
+          ) : (
+            <>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "16px" }}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Data</th>
+                    <th style={thStyle}>Benefício</th>
+                    <th style={thStyle}>Custo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historicoGastos.map(gasto => {
+                    const data = gasto.purchasedAt?.toDate
+                      ? gasto.purchasedAt.toDate()
+                      : gasto.purchasedAt?.toMillis
+                        ? new Date(gasto.purchasedAt.toMillis())
+                        : null;
+                    return (
+                      <tr key={gasto.id} style={{ borderBottom: "1px solid var(--borda)" }}>
+                        <td style={tdStyle}>
+                          {data
+                            ? data.toLocaleString("pt-BR", {
+                                day: "2-digit", month: "2-digit", year: "numeric",
+                                hour: "2-digit", minute: "2-digit",
+                              })
+                            : "-"}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "left", fontSize: "13px" }}>
+                          {gasto.itemNome || "Benefício"}
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={{ ...gastoBadge, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            −{gasto.itemPreco} <CoinLottie size={16} />
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={{ fontSize: "12px", color: "var(--texto-muito-suave)", marginTop: "12px", textAlign: "right" }}>
+                Total gasto: <strong>{totalGasto} <CoinLottie size={16} /></strong>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -440,7 +523,7 @@ function StatBox({ valor, comparativo, label, pct, isPercent }) {
   );
 }
 
-/* EstiloS */
+/* Estilos */
 const container = { minHeight: "100vh", background: "transparent", padding: "30px" };
 const header    = { textAlign: "center", marginBottom: "30px" };
 const card = {
@@ -471,6 +554,39 @@ const nivelBadge = {
   gap: "10px", marginBottom: "8px",
 };
 const nivelLabel = { fontSize: "20px", fontWeight: "bold", color: "var(--texto-suave)" };
+
+// Cabeçalho dos cards de histórico
+const historicoHeader = {
+  display: "flex", justifyContent: "space-between",
+  alignItems: "flex-start", flexWrap: "wrap", gap: "12px",
+};
+
+// Box de total de ganhos (XP)
+const totalGanhosBox = {
+  display: "flex", flexDirection: "column", alignItems: "center",
+  background: "var(--cor-primaria-claro)", borderRadius: "12px",
+  padding: "8px 16px", border: "1px solid var(--cor-primaria-borda)",
+  flexShrink: 0,
+};
+const totalGanhosNum = {
+  fontSize: "20px", fontWeight: "bold",
+  fontFamily: "'Fredoka One', sans-serif",
+  color: "var(--cor-primaria-texto)",
+};
+
+// Saldo de moedas
+const saldoBox = {
+  display: "flex", alignItems: "center", gap: "6px",
+  background: "#fff8e1", borderRadius: "12px",
+  padding: "6px 14px", border: "1px solid #ffe0b2",
+  flexShrink: 0,
+};
+const saldoNum = {
+  fontSize: "20px", fontWeight: "bold",
+  fontFamily: "'Fredoka One', sans-serif",
+  color: "#e65100",
+};
+
 const thStyle = {
   padding: "8px", fontSize: "12px", color: "var(--texto-muito-suave)",
   borderBottom: "2px solid var(--borda)", textAlign: "center",
@@ -479,12 +595,21 @@ const tdStyle = {
   padding: "10px 8px", fontSize: "13px",
   textAlign: "center", color: "var(--texto)",
 };
-const xpBadge = {
+
+// Badge de ganho (XP e moedas juntos - mesmo valor)
+const ganhoBadge = {
   background: "var(--cor-primaria-claro)", color: "var(--cor-primaria-texto)",
   fontWeight: "bold", fontSize: "12px", padding: "3px 8px", borderRadius: "10px",
 };
-const xpBadgeZero = {
+const ganhoBadgeZero = {
   background: "var(--bg-hover)", color: "var(--texto-muito-suave)",
   fontWeight: "bold", fontSize: "12px", padding: "3px 8px", borderRadius: "10px",
   border: "1px solid var(--borda)",
+};
+
+// Badge de gasto (só moedas, negativo)
+const gastoBadge = {
+  fontWeight: "bold", fontSize: "12px", padding: "3px 8px", borderRadius: "10px",
+  background: "var(--cor-perigo-claro)", color: "var(--cor-perigo)",
+  border: "1px solid var(--cor-perigo-borda)",
 };

@@ -5,6 +5,7 @@ import { db } from "../services/firebase";
 import { useShop } from "../hooks/useShop";
 import Spinner from "../components/Spinner";
 import TwemojiImg from "../components/TwemojiImg";
+import CoinLottie from "../components/CoinLottie";
 
 /**
  * ShopPageProfessor - gerenciamento da loja de benefícios de uma turma.
@@ -345,7 +346,7 @@ export default function ShopPageProfessor({ classId, courseId }) {
                               <span style={{ fontWeight: "700", fontSize: "15px", color: item.disponivel ? "var(--texto)" : "var(--texto-muito-suave)" }}>
                                 {item.nome}
                               </span>
-                              <span style={moedasBadge}>💰 {item.preco}</span>
+                              <span style={moedasBadge}><CoinLottie size={16} /> {item.preco}</span>
                               {!item.disponivel && <span style={badgeIndisponivel}>indisponível</span>}
                             </div>
                             {item.descricao && (
@@ -401,7 +402,7 @@ export default function ShopPageProfessor({ classId, courseId }) {
                           <td style={td}>{nomesAlunos[c.userId] || "-"}</td>
                           <td style={{ ...td, textAlign: "left" }}>{c.itemNome}</td>
                           <td style={td}>
-                            <span style={moedasBadge}>💰 {c.itemPreco}</span>
+                            <span style={moedasBadge}><CoinLottie size={16} /> {c.itemPreco}</span>
                           </td>
                           <td style={{ ...td, fontSize: "12px", color: "var(--texto-muito-suave)" }}>
                             {c.purchasedAt?.toDate
@@ -544,6 +545,7 @@ const moedasBadge = {
   background: "#fff8e1", color: "#e65100",
   padding: "2px 8px", borderRadius: "10px",
   border: "1px solid #ffe0b2",
+  display: "inline-flex", alignItems: "center", gap: "4px",
 };
 
 const tabela = { width: "100%", borderCollapse: "collapse", fontSize: "13px" };
