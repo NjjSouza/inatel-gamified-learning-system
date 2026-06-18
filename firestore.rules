@@ -160,26 +160,40 @@ service cloud.firestore {
       allow create: if isProfessor();
       allow update: if isAuthenticated() &&
         resource.data.professorId == request.auth.uid;
-      allow delete: if false;
+      // Exclusão permitida apenas para lojas fechadas sem compras (validação feita no cliente)
+      allow delete: if isProfessor() &&
+        resource.data.professorId == request.auth.uid &&
+        resource.data.status == "closed";
     }
-  
+
     // Itens da loja
     match /shop_items/{itemId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() && (
-        isProfessor() ||
-        get(/databases/$(database)/documents/shops/$(resource.data.shopId))
-          .data.professorId == request.auth.uid
-      );
-      allow delete: if false;
+      allow create: if isProfessor();
+      allow update: if isAuthenticated() && isProfessor();
+      // Exclusão física permitida apenas pelo professor (usada ao excluir a loja pai)
+      allow delete: if isProfessor();
     }
-  
+
     // Compras
     match /shop_purchases/{purchaseId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
         request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
+    }
+
+    // Catálogo de benefícios (persistente por professor)
+    // Cada professor só pode ler, criar, editar e excluir os próprios itens.
+    match /shop_catalog/{catalogItemId} {
+      allow read: if isAuthenticated() && isProfessor() &&
+        resource.data.professorId == request.auth.uid;
+      allow create: if isProfessor() &&
+        request.resource.data.professorId == request.auth.uid;
+      allow update: if isProfessor() &&
+        resource.data.professorId == request.auth.uid;
+      allow delete: if isProfessor() &&
+        resource.data.professorId == request.auth.uid;
     }
   }
 }

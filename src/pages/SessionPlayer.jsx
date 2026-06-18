@@ -89,7 +89,6 @@ export default function SessionPlayer() {
       setShowFinishedOverlay(true);
     }
 
-    // Busca jogadores para o ranking final
     const fetchFinalPlayers = async () => {
       const q = query(
         collection(db, "session_players"),
@@ -97,7 +96,6 @@ export default function SessionPlayer() {
       );
       const snap = await getDocs(q);
       const players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Ordena por score e mantém apenas TOP 3
       const top3 = [...players]
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
         .slice(0, 3);
@@ -141,6 +139,53 @@ export default function SessionPlayer() {
     respostaAberta,
   ]);
 
+  // Aviso explícito ao tentar fechar/recarregar durante questão aberta
+  // O beforeunload anterior só salva silenciosamente; este exibe o diálogo nativo
+  // do navegador pedindo confirmação, o que desencoraja saídas intencionais
+  useEffect(() => {
+    const current = shuffledQuestions[session?.currentQuestionIndex];
+    const ativo = current?.tipo === "aberta" && !answered && session?.status === "playing";
+    if (!ativo) return;
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      // A mensagem customizada não é exibida em navegadores modernos por segurança,
+      // mas o diálogo nativo de confirmação ainda aparece.
+      e.returnValue = "Você está no meio de uma questão aberta. Sair agora enviará sua resposta como está.";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [session?.currentQuestionIndex, session?.status, shuffledQuestions, answered]);
+
+  // Bloqueio suave do botão Voltar do navegador
+  // Se o aluno pressionar Voltar, o popstate detecta e reinjeta a entrada,
+  // mantendo-o na página. Um aviso explícito é exibido na tela (não alert,
+  // para não bloquear o JS) enquanto a sessão estiver ativa e sem resposta.
+  const [showBackWarning, setShowBackWarning] = useState(false);
+
+  useEffect(() => {
+    const sessaoAtiva = session?.status === "playing";
+    if (!sessaoAtiva) return;
+
+    // Empurra uma entrada falsa para que o "Voltar" não leve o aluno para fora
+    window.history.pushState({ inSession: true }, "");
+
+    const handlePopState = (e) => {
+      if (!answered) {
+        // Reinjeta a entrada para continuar bloqueando
+        window.history.pushState({ inSession: true }, "");
+        // Exibe aviso não-bloqueante por 3 segundos
+        setShowBackWarning(true);
+        setTimeout(() => setShowBackWarning(false), 3000);
+      }
+      // Se já respondeu, deixa navegar normalmente (não reinjeta)
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [session?.status, answered]);
+
   if (!session) return <Spinner />;
 
   if (session.status === "waiting") return (
@@ -175,7 +220,6 @@ export default function SessionPlayer() {
             XPs de questões abertas são contabilizados após correção do professor.
           </p>
 
-          {/* TOP 3 - só os três primeiros colocados */}
           {finalPlayers.length > 0 && (
             <>
               <p style={top3Label}>Ranking Top 3</p>
@@ -196,6 +240,13 @@ export default function SessionPlayer() {
   /* Questão aberta */
   if (isAberta) return (
     <div style={{ minHeight: "100vh", background: "transparent" }}>
+      {/* Aviso de botão Voltar */}
+      {showBackWarning && (
+        <div style={backWarningBanner}>
+          Navegação bloqueada durante a sessão. Sua resposta será salva ao sair.
+        </div>
+      )}
+
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay
@@ -263,6 +314,13 @@ export default function SessionPlayer() {
 
   return (
     <div style={{ minHeight: "100vh", background: "transparent" }}>
+      {/* Aviso de botão Voltar */}
+      {showBackWarning && (
+        <div style={backWarningBanner}>
+          Navegação bloqueada durante a sessão. Responda a questão para continuar.
+        </div>
+      )}
+
       <div style={pageCenter}>
         {showAnswerOverlay && (
           <LottieOverlay
@@ -370,4 +428,14 @@ const answeredOpenBox = {
   background: "var(--cor-primaria-claro)", borderRadius: "10px",
   padding: "20px", marginTop: "8px",
   border: "1px solid var(--cor-primaria-borda)",
+};
+
+// Banner não-bloqueante exibido quando o aluno tenta usar o botão Voltar
+const backWarningBanner = {
+  position: "fixed", top: "56px", left: 0, right: 0,
+  background: "var(--cor-aviso-claro)", color: "var(--cor-aviso-texto)",
+  border: "none", borderBottom: "2px solid var(--cor-aviso-borda)",
+  padding: "10px 20px", textAlign: "center",
+  fontSize: "14px", fontWeight: "600",
+  zIndex: 999, animation: "fadeIn 0.2s ease",
 };

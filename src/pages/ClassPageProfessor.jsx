@@ -11,6 +11,7 @@ import NivelIcon from "../components/NivelIcon";
 import ImportarAlunos from "../components/ImportarAlunos";
 import ShopPageProfessor from "../pages/ShopPageProfessor";
 import EmptyState from "../components/EmptyState";
+import TwemojiImg from "../components/TwemojiImg";
 
 // Timer ativo
 function SessionTimer({ sessionId }) {
