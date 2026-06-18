@@ -5,16 +5,9 @@ import { useClasses } from "../hooks/useClasses";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import TwemojiImg from "../components/TwemojiImg";
+import NivelIcon from "../components/NivelIcon";
 import { getNivel } from "../utils/niveis";
-
-const NIVEL_CODEPOINTS = {
-  "Pedra":    "1faa8",
-  "Bronze":   "1f949",
-  "Prata":    "1f948",
-  "Ouro":     "1f947",
-  "Diamante": "1f48e",
-};
+import EmptyState from "../components/EmptyState";
 
 export default function ProfileAluno() {
   const { user, logout } = useAuth();
@@ -96,11 +89,7 @@ export default function ProfileAluno() {
                     <span style={{ fontSize: "13px", color: "var(--texto-suave)" }}>{t.semestre}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       {!semNivel && t.nivel.codepoint && (
-                        <TwemojiImg
-                          codepoint={NIVEL_CODEPOINTS[t.nivel.label] || t.nivel.codepoint}
-                          size={20}
-                          alt={t.nivel.label}
-                        />
+                        <NivelIcon nivel={t.nivel.label} size={24} />
                       )}
                       <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--texto-suave)" }}>
                         {semNivel ? "-" : t.nivel.label}

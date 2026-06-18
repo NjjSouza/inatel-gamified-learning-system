@@ -3,6 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useShop } from "../hooks/useShop";
 import Spinner from "../components/Spinner";
 import CoinLottie from "../components/CoinLottie";
+import EmptyState from "../components/EmptyState";
 
 /**
  * ShopPageAluno - vitrine de benefícios de uma turma.
@@ -73,15 +74,12 @@ export default function ShopPageAluno({ classId }) {
         <div style={cabecalho}>
           <h2 style={titulo}>Loja de Benefícios</h2>
         </div>
-        <div style={lojaFechadaCard}>
-          <span style={{ fontSize: "40px", display: "block", marginBottom: "12px" }}>🔒︎</span>
-          <p style={{ fontWeight: "bold", color: "var(--texto)", fontSize: "15px", margin: "0 0 4px" }}>
-            Loja fechada
-          </p>
-          <p style={{ fontSize: "13px", color: "var(--texto-suave)", margin: 0 }}>
-            O professor abrirá a loja próximo às datas de prova.
-          </p>
-        </div>
+        <EmptyState
+          icon="lock"
+          variante="neutro"
+          titulo="Loja fechada"
+          mensagem="O professor alertará sempre que uma nova loja de compra de benefícios estiver aberta."
+        />
       </div>
     );
   }
@@ -109,9 +107,12 @@ export default function ShopPageAluno({ classId }) {
 
       {/* Sem itens */}
       {items.length === 0 && (
-        <p style={{ color: "var(--texto-suave)", fontSize: "14px", textAlign: "center", padding: "20px 0" }}>
-          Nenhum benefício disponível ainda.
-        </p>
+        <EmptyState
+          icon="bag"
+          variante="inatel"
+          compacto
+          titulo="Nenhum benefício disponível ainda"
+        />
       )}
 
       {/* Grid de itens disponíveis */}
@@ -215,12 +216,6 @@ const saldoNum = {
   fontSize: "22px", fontWeight: "bold",
   fontFamily: "'Fredoka One', sans-serif",
   color: "#e65100",
-};
-
-const lojaFechadaCard = {
-  textAlign: "center", padding: "32px",
-  background: "var(--bg-input)", borderRadius: "12px",
-  border: "1px solid var(--borda)",
 };
 
 const grid = {

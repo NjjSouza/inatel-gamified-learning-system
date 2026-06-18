@@ -7,9 +7,10 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { db } from "../services/firebase";
 import { getNivel, NIVEIS } from "../utils/niveis";
 import Spinner from "../components/Spinner";
-import TwemojiImg from "../components/TwemojiImg";
+import NivelIcon from "../components/NivelIcon";
 import ImportarAlunos from "../components/ImportarAlunos";
 import ShopPageProfessor from "../pages/ShopPageProfessor";
+import EmptyState from "../components/EmptyState";
 
 // Timer ativo
 function SessionTimer({ sessionId }) {
@@ -203,7 +204,14 @@ export default function ClassPageProfessor() {
           <h2>Criar Sessão</h2>
           <p style={sectionLabel}>Selecione o quiz:</p>
           {quizzes.length === 0 ? (
-            <p style={{ color: "var(--texto-suave)" }}>Você ainda não criou nenhum quiz.</p>
+            <EmptyState
+              icon="quiz"
+              variante="aviso"
+              compacto
+              titulo="Nenhum quiz disponível"
+              mensagem="Crie um quiz antes de iniciar uma sessão com esta turma."
+              acao={{ label: "Ir para meus quizzes", onClick: () => navigate("/professor") }}
+            />
           ) : (
             quizzes.map(q => (
               <button
@@ -232,7 +240,13 @@ export default function ClassPageProfessor() {
       <div style={card}>
         <h2>Sessões Ativas</h2>
         {sessoesAtivas.length === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>Nenhuma sessão ativa no momento.</p>
+          <EmptyState
+            icon="bolt"
+            variante="inatel"
+            compacto
+            titulo="Nenhuma sessão ativa"
+            mensagem="Crie uma sessão a partir de um quiz para começar a aplicar com a turma."
+          />
         ) : (
           sessoesAtivas.map(s => {
             const players = playersBySession[s.id] || [];
@@ -522,7 +536,12 @@ export default function ClassPageProfessor() {
         )}
         
         {alunosOrdenados.length === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>Nenhum aluno cadastrado nesta turma ainda.</p>
+          <EmptyState
+            icon="users"
+            variante="aviso"
+            titulo="Nenhum aluno matriculado"
+            mensagem="Importe dados dos alunos através de uma planilha ou adicione manualmente usando as opções acima. Após cadastrados eles podem realizar o primeiro acesso na plataforma."
+          />
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -560,7 +579,7 @@ export default function ClassPageProfessor() {
                           <span style={{ fontSize: "13px", color: "var(--texto-muito-suave)" }}>-</span>
                         ) : (
                           <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-                            <TwemojiImg codepoint={nivel.codepoint} size={18} alt={nivel.label} />
+                            <NivelIcon nivel={nivel.label} size={22} />
                             <span style={{ fontSize: "12px", color: "var(--texto-suave)" }}>{nivel.label}</span>
                           </span>
                         )

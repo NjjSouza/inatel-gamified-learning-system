@@ -6,6 +6,7 @@ import { useShop } from "../hooks/useShop";
 import Spinner from "../components/Spinner";
 import TwemojiImg from "../components/TwemojiImg";
 import CoinLottie from "../components/CoinLottie";
+import EmptyState from "../components/EmptyState";
 
 /**
  * ShopPageProfessor - gerenciamento da loja de benefícios de uma turma.
@@ -227,9 +228,12 @@ export default function ShopPageProfessor({ classId, courseId }) {
 
       {/* Conteúdo da loja selecionada */}
       {!lojaAtiva ? (
-        <div style={vazio}>
-          <p style={{ color: "var(--texto-suave)" }}>Nenhuma loja criada ainda. Abra a primeira acima!</p>
-        </div>
+        <EmptyState
+          icon="bag"
+          variante="primaria"
+          titulo="Abra sua primeira loja"
+          mensagem="Use o campo acima para nomear e abrir uma loja para esta turma."
+        />
       ) : (
         <>
           {/* Status + ações da loja */}
@@ -318,9 +322,13 @@ export default function ShopPageProfessor({ classId, courseId }) {
 
               {/* Lista de itens */}
               {items.length === 0 ? (
-                <p style={{ color: "var(--texto-suave)", fontSize: "14px", textAlign: "center", padding: "20px 0" }}>
-                  Nenhum produto cadastrado.
-                </p>
+                <EmptyState
+                  icon="bag"
+                  variante={lojaAberta ? "primaria" : "neutro"}
+                  compacto
+                  titulo="Nenhum produto cadastrado"
+                  mensagem={lojaAberta ? "Adicione o primeiro produto usando o formulário acima." : undefined}
+                />
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {items.map((item) => (
@@ -377,9 +385,12 @@ export default function ShopPageProfessor({ classId, courseId }) {
           {abaAtiva === "compras" && (
             <div>
               {compras.length === 0 ? (
-                <p style={{ color: "var(--texto-suave)", fontSize: "14px", textAlign: "center", padding: "20px 0" }}>
-                  Nenhuma compra realizada ainda.
-                </p>
+                <EmptyState
+                  icon="inbox"
+                  variante="neutro"
+                  compacto
+                  titulo="Nenhuma compra realizada ainda. Avise os alunos sobre a abertura!"
+                />
               ) : (
                 <table style={tabela}>
                   <thead>

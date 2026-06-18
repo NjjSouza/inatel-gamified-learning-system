@@ -1,112 +1,128 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
 
-/* Variáveis globais - Inatelligent
-Primário: verde 
-Perigo: vermelho - ações destrutivas
-Aviso: laranja
-Sucesso: verde
-Neutro: cinza
-Fundo: azul escuro */
+/*
+  Inatelligent - Design System v2
+  - Fundo neutro claro/escuro (Duolingo-style)
+  - Verde como cor de ação principal
+  - Azul como cor de apoio e destaque informativo
+  - Laranja, vermelho, verde para feedback semântico (erro, aviso, sucesso)
+  - Tipografia Fredoka One para títulos e Nunito para texto corrido
+*/
 
 :root {
-  /* Cor primária */
-  --cor-primaria:         #06df2e;
-  --cor-primaria-hover:   #279b2b;
-  --cor-primaria-claro:   #daeedc;
-  --cor-primaria-borda:   rgba(50, 174, 54, 0.35);
-  --cor-primaria-texto:   #1b5e20;
+  /* Cor primária: verde */
+  --cor-primaria:           #2ecc71;   /* mais suave */
+  --cor-primaria-hover:     #27ae60;   /* hover: escurece levemente             */
+  --cor-primaria-claro:     #eafaf1;   /* fundo de badge/destaque verde         */
+  --cor-primaria-borda:     rgba(46, 204, 113, 0.3);
+  --cor-primaria-texto:     #1a5e35;   /* texto sobre fundo verde claro         */
 
-  /* Perigo (excluir, encerrar, sair) */
-  --cor-perigo:           #C64D4D;
-  --cor-perigo-hover:     #b04444;
-  --cor-perigo-claro:     #ffebee;
-  --cor-perigo-borda:     rgba(198, 77, 77, 0.3);
-  --cor-perigo-texto:     #7f1d1d;
+  /* Azul */
+  --cor-inatel:             #2d7dd2;
+  --cor-inatel-hover:       #1f5fa6;
+  --cor-inatel-claro:       #e8f1fb;
+  --cor-inatel-borda:       rgba(45, 125, 210, 0.25);
+  --cor-inatel-texto:       #14366b;
 
-  /* Aviso (questões abertas, pendências) */
-  --cor-aviso:            #e65100;
-  --cor-aviso-claro:      #fff3e0;
-  --cor-aviso-borda:      #ffe0b2;
-  --cor-aviso-texto:      #bf360c;
+  /* Perigo: vermelho (ações destrutivas) */
+  --cor-perigo:             #e74c3c;
+  --cor-perigo-hover:       #c0392b;
+  --cor-perigo-claro:       #fdf0ee;
+  --cor-perigo-borda:       rgba(231, 76, 60, 0.25);
+  --cor-perigo-texto:       #7b1a11;
 
-  /* Progresso: (médio, 40 - 69%) */
-  --cor-alerta:           #e08000;
-  --cor-alerta-claro:     #fff8e1;
+  /* Aviso: laranja (pendências, atenção) */
+  --cor-aviso:              #e67e22;
+  --cor-aviso-claro:        #fef5ec;
+  --cor-aviso-borda:        #fad9b5;
+  --cor-aviso-texto:        #7d3a06;
 
-  /* Fundos e superfícies (modo claro) */
-  --bg:                   #668aa5;      /* azul - fundo da página */
-  --bg-card:              #ffffff;      /* cards brancos puros - melhor contraste */
-  --bg-input:             #f4f8ff;      /* inputs levemente azulados */
-  --bg-hover:             #eef2f7;
+  /* Alerta médio: âmbar (40-69%) */
+  --cor-alerta:             #f39c12;
+  --cor-alerta-claro:       #fef9ec;
+
+  /* Fundos: neutros quentes (modo claro) */
+  --bg:                     #f5f5f0;   /* off-white levemente quente            */
+  --bg-card:                #ffffff;   /* cards brancos puros                   */
+  --bg-input:               #f9f9f7;   /* inputs levíssimos                     */
+  --bg-hover:               #f0f0eb;   /* hover sutil                           */
 
   /* Texto (modo claro) */
-  --texto:                #1a1a2e;      /* quase preto */
-  --texto-suave:          #2d3f57;      /* azul-escuro */
-  --texto-muito-suave:    #607590;     
-  --texto-inv:            #ffffff;      /* texto sobre fundos escuros */
+  --texto:                  #1a1a1a;   /* quase preto, não 100% puro            */
+  --texto-suave:            #4a4a4a;
+  --texto-muito-suave:      #8a8a8a;
+  --texto-inv:              #ffffff;
 
-  /* Bordas e sombras (modo claro) */
-  --borda:                #c8d8ea;
-  --sombra:               rgba(26, 58, 92, 0.14);
-  --sombra-card:          0 2px 12px rgba(26, 58, 92, 0.12);
+  /* Bordas e sombras */
+  --borda:                  #e0e0d8;
+  --sombra:                 rgba(0, 0, 0, 0.07);
+  --sombra-card:            0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 0.5px rgba(0,0,0,0.04);
 
   /* Destaques especiais */
-  --destaque-primeiro:    #e8f5e9;      /* 1º lugar no ranking */
-  --destaque-usuario:     #e3f2fd;      /* linha do usuário atual */
+  --destaque-primeiro:      #eafaf1;
+  --destaque-usuario:       #e8f1fb;
 
-  /* Interrogações do fundo */
-  --cor-interrogacao:     rgba(255, 255, 255, 0.08);
+  /* Decoração de fundo */
+  --cor-interrogacao: rgba(45, 125, 210, 0.06);
 }
 
 /* Modo escuro */
 @media (prefers-color-scheme: dark) {
   :root {
-    --cor-primaria:         #3dbb42;
-    --cor-primaria-hover:   #2fa334;
-    --cor-primaria-claro:   #1b3a1e;
-    --cor-primaria-borda:   rgba(76, 187, 82, 0.35);
-    --cor-primaria-texto:   #a5d6a7;
+    /* Verde principal */
+    --cor-primaria:           #2ecc71;
+    --cor-primaria-hover:     #27ae60;
+    --cor-primaria-claro:     #0d2e1c;
+    --cor-primaria-borda:     rgba(46, 204, 113, 0.2);
+    --cor-primaria-texto:     #7ee8a8;
+
+    /* Azul */
+    --cor-inatel:             #4a9edd;
+    --cor-inatel-hover:       #2d7dd2;
+    --cor-inatel-claro:       #0d1f3a;
+    --cor-inatel-borda:       rgba(74, 158, 221, 0.2);
+    --cor-inatel-texto:       #93c5fd;
 
     /* Perigo */
-    --cor-perigo:           #a93737;
-    --cor-perigo-hover:     #c95555;
-    --cor-perigo-claro:     #3b1212;
-    --cor-perigo-borda:     rgba(224, 96, 96, 0.3);
-    --cor-perigo-texto:     #ffcdd2;
+    --cor-perigo:             #e74c3c;
+    --cor-perigo-hover:       #c0392b;
+    --cor-perigo-claro:       #2d0f0c;
+    --cor-perigo-borda:       rgba(231, 76, 60, 0.2);
+    --cor-perigo-texto:       #fca5a5;
 
     /* Aviso */
-    --cor-aviso:            #ff7043;
-    --cor-aviso-claro:      #3e1a00;
-    --cor-aviso-borda:      #6d2f00;
-    --cor-aviso-texto:      #ffccbc;
+    --cor-aviso:              #f39c12;
+    --cor-aviso-claro:        #2a1800;
+    --cor-aviso-borda:        #6b3a00;
+    --cor-aviso-texto:        #fcd34d;
 
-    /* Progresso */
-    --cor-alerta:           #ffb300;
-    --cor-alerta-claro:     #2a1f00;
+    /* Alerta */
+    --cor-alerta:             #f39c12;
+    --cor-alerta-claro:       #1e1200;
 
-    /* Fundos (modo escuro) */
-    --bg:                   #365d7d;
-    --bg-card:              #162032;
-    --bg-input:             #1a2a40;
-    --bg-hover:             #1e2f45;
+    /* Fundos escuros */
+    --bg:                     #111110;   /* quase preto com leve tom quente       */
+    --bg-card:                #1c1c1a;   /* card: cinza muito escuro              */
+    --bg-input:               #242422;
+    --bg-hover:               #2a2a27;
 
-    /* Texto (modo escuro) */
-    --texto:                #e8edf4;
-    --texto-suave:          #94aac4;      
-    --texto-muito-suave:    #7a96b2;     
-    --texto-inv:            #0d1f33;
+    /* Texto */
+    --texto:                  #f0f0ec;
+    --texto-suave:            #a0a09a;
+    --texto-muito-suave:      #6a6a65;
+    --texto-inv:              #111110;
 
     /* Bordas e sombras */
-    --borda:                #253d56;      
-    --sombra:               rgba(0, 0, 0, 0.4);
-    --sombra-card:          0 2px 16px rgba(0, 0, 0, 0.35);
+    --borda:                  #2e2e2b;
+    --sombra:                 rgba(0, 0, 0, 0.4);
+    --sombra-card:            0 2px 12px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(255,255,255,0.04);
 
     /* Destaques */
-    --destaque-primeiro:    #0c3c5c;
-    --destaque-usuario:     #0d2a3e;
+    --destaque-primeiro:      #0d2e1c;
+    --destaque-usuario:       #0d1f3a;
 
-    /* Interrogações */
-    --cor-interrogacao:     rgba(255, 255, 255, 0.04);
+    /* Decoração de fundo */
+    --cor-interrogacao: rgba(74, 158, 221, 0.08);
   }
 }
 
@@ -122,14 +138,16 @@ body {
   font-size: 16px;
   color: var(--texto);
   background-color: var(--bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='10' y='40' font-size='30' fill='rgba(255,255,255,0.08)'%3E%3F%3C/text%3E%3C/svg%3E");
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Ctext x='18' y='58' font-size='34' fill='%232d7dd2' fill-opacity='0.075'%3E%3F%3C/text%3E%3C/svg%3E");
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='10' y='40' font-size='30' fill='rgba(255,255,255,0.04)'%3E%3F%3C/text%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Ctext x='18' y='58' font-size='34' fill='%234a9edd' fill-opacity='0.10'%3E%3F%3C/text%3E%3C/svg%3E");
   }
 }
 
@@ -141,10 +159,11 @@ h1, h2, h3, h4 {
   font-family: 'Fredoka One', sans-serif;
   font-weight: 400;
   color: var(--texto);
+  letter-spacing: 0.01em;
 }
 
 p {
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 button {
@@ -172,12 +191,23 @@ textarea::placeholder {
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
+  50%       { opacity: 0.45; }
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.92); }
+  60%  { transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* Utilitários globais */
@@ -190,21 +220,23 @@ textarea::placeholder {
 
 .card-padrao {
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: var(--sombra-card);
   border: 1px solid var(--borda);
 }
 
+/* XP badge - peso 800 para destaque numérico */
 .badge-xp {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   background: var(--cor-primaria-claro);
   color: var(--cor-primaria-texto);
-  font-weight: bold;
+  font-weight: 800;
   font-size: 12px;
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 10px;
+  letter-spacing: 0.01em;
 }
 
 .badge-aberta {
@@ -212,13 +244,13 @@ textarea::placeholder {
   padding: 2px 8px;
   border-radius: 10px;
   background: var(--cor-aviso-claro);
-  color: var(--cor-aviso-texto);     
-  font-weight: bold;
+  color: var(--cor-aviso-texto);
+  font-weight: 700;
 }
 
 .barra-fundo {
   width: 100%;
-  height: 8px;
+  height: 7px;
   background: var(--borda);
   border-radius: 4px;
   overflow: hidden;

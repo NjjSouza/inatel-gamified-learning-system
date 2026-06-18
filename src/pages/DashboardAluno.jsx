@@ -5,6 +5,7 @@ import { useClasses } from "../hooks/useClasses";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
+import EmptyState from "../components/EmptyState";
 
 function DashboardAluno() {
   const { user } = useAuth();
@@ -49,7 +50,12 @@ function DashboardAluno() {
       <div style={card}>
         <h2>Minhas Disciplinas</h2>
         {disciplinas.length === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>Você ainda não está matriculado em nenhuma disciplina.</p>
+          <EmptyState
+            icon="book"
+            variante="inatel"
+            titulo="Nenhuma disciplina ainda"
+            mensagem="Seu professor precisa te matricular em uma turma. Passe seu nome e matrícula a ele, ou aguarde a confirmação do cadastro."
+          />
         ) : (
           disciplinas.map((curso) => (
             <button

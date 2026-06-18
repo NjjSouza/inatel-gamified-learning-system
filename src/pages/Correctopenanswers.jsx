@@ -6,6 +6,7 @@ import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import Spinner from "../components/Spinner";
 import TwemojiImg from "../components/TwemojiImg";
+import EmptyState from "../components/EmptyState";
 
 // Estados possíveis de correção local (nunca vão ao BD até confirmação final)
 // null     = ainda não corrigido
@@ -186,7 +187,11 @@ export default function CorrectOpenAnswers() {
 
       {/* Questões */}
       {questoes.length === 0 ? (
-        <div style={card}><p style={{ color: "var(--texto-suave)" }}>Nenhuma questão aberta encontrada.</p></div>
+        <EmptyState
+          icon="file"
+          variante="neutro"
+          titulo="Nenhuma questão aberta encontrada"
+        />
       ) : (
         questoes.map((questao, qi) => {
           const respostasQuestao  = respostasPorQuestao[questao.id] || [];

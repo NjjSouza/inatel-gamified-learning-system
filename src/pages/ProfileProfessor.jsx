@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useCourses } from "../hooks/useCourses";
 import { useClasses } from "../hooks/useClasses";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import EmptyState from "../components/EmptyState";
 
 export default function ProfileProfessor() {
   const { user, logout } = useAuth();
@@ -59,7 +60,12 @@ export default function ProfileProfessor() {
         {loading ? (
           <p style={{ color: "var(--texto-suave)" }}>Carregando...</p>
         ) : disciplinas.length === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>Nenhuma disciplina criada ainda.</p>
+          <EmptyState
+            icon="book"
+            variante="inatel"
+            titulo="Nenhuma disciplina criada ainda"
+            mensagem="Crie disciplinas e turmas na área principal."
+          />
         ) : (
           disciplinas.map((disc) => (
             <div key={disc.id} style={discCard}>

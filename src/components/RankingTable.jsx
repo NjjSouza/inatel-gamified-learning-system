@@ -1,13 +1,5 @@
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import TwemojiImg from "./TwemojiImg";
-
-const NIVEL_CODEPOINTS = {
-  "Pedra":    "1faa8",
-  "Bronze":   "1f949",
-  "Prata":    "1f948",
-  "Ouro":     "1f947",
-  "Diamante": "1f48e",
-};
+import NivelIcon from "../components/NivelIcon";
 
 export default function RankingTable({ players, highlightUserId, showNivel = false }) {
   if (!players || players.length === 0) return null;
@@ -61,11 +53,7 @@ export default function RankingTable({ players, highlightUserId, showNivel = fal
                 <td style={{ ...tdStyle, textAlign: "left" }}>{p.nome}</td>
                 {showNivel && p.nivel && p.nivel.label !== "-" && (
                   <td style={tdStyle}>
-                    <TwemojiImg
-                      codepoint={NIVEL_CODEPOINTS[p.nivel.label] || "1f947"}
-                      size={20}
-                      alt={p.nivel.label}
-                    />
+                    <NivelIcon nivel={p.nivel.label} size={24} />
                     {" "}{p.nivel.label}
                   </td>
                 )}

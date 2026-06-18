@@ -8,18 +8,11 @@ import { db } from "../services/firebase";
 import { getNivel } from "../utils/niveis";
 import Spinner from "../components/Spinner";
 import RankingTable from "../components/RankingTable";
-import TwemojiImg from "../components/TwemojiImg";
+import NivelIcon from "../components/NivelIcon";
 import ShopPageAluno from "../pages/ShopPageAluno";
 import { useShop } from "../hooks/useShop";
 import CoinLottie from "../components/CoinLottie";
-
-const NIVEL_CODEPOINTS = {
-  "Pedra":    "1faa8",
-  "Bronze":   "1f949",
-  "Prata":    "1f948",
-  "Ouro":     "1f947",
-  "Diamante": "1f48e",
-};
+import EmptyState from "../components/EmptyState";
 
 /**
  * Agrupa entradas do histórico de XP por sessão para múltipla escolha,
@@ -311,17 +304,17 @@ export default function CoursePageAluno() {
       <div style={card}>
         <h2>Meu Desempenho</h2>
         {stats.totalRespostas === 0 && stats.totalXP === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>
-            Você ainda não participou de nenhuma sessão nesta disciplina.
-          </p>
+          <EmptyState
+            icon="chart"
+            variante="inatel"
+            titulo="Você ainda não participou de nenhuma sessão"
+            mensagem="Quando participar de uma sessão nesta disciplina, seu desempenho aparecerá aqui."
+          />
         ) : (
           <>
             {meuNivel.label !== "-" && meuNivel.codepoint && (
               <div style={nivelBadge}>
-                <TwemojiImg
-                  codepoint={NIVEL_CODEPOINTS[meuNivel.label] || meuNivel.codepoint}
-                  size={36} alt={meuNivel.label}
-                />
+                <NivelIcon nivel={meuNivel.label} size={36} />
                 <span style={nivelLabel}>{meuNivel.label}</span>
               </div>
             )}
@@ -489,7 +482,12 @@ export default function CoursePageAluno() {
       <div style={card}>
         <h2>Ranking da Turma</h2>
         {ranking.length === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>Nenhum aluno com XP ainda.</p>
+          <EmptyState
+            icon="trophy"
+            variante="neutro"
+            compacto
+            titulo="Nenhum aluno com XP ainda"
+          />
         ) : (
           <RankingTable players={ranking} highlightUserId={user.uid} showNivel={true} />
         )}

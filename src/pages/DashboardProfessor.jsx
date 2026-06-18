@@ -4,6 +4,7 @@ import { useCourses } from "../hooks/useCourses";
 import { useQuizzes } from "../hooks/useQuizzes";
 import { useNavigate } from "react-router-dom";
 import Spinner from "../components/Spinner";
+import EmptyState from "../components/EmptyState";
 
 function DashboardProfessor() {
   const { user } = useAuth();
@@ -76,7 +77,12 @@ function DashboardProfessor() {
           <button onClick={handleCreateCourse} style={buttonPrimary}>Criar</button>
         </div>
         {courses.length === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>Nenhuma disciplina criada</p>
+          <EmptyState
+            icon="book"
+            variante="primaria"
+            titulo="Crie sua primeira disciplina"
+            mensagem="Disciplinas organizam suas turmas e quizzes. Digite um nome acima e clique em Criar."
+          />
         ) : (
           courses.map((course) => (
             <button key={course.id} onClick={() => navigate(`/professor/curso/${course.id}`)} style={cardButton}>
@@ -98,7 +104,12 @@ function DashboardProfessor() {
           <button onClick={handleCreateQuiz} style={buttonPrimary}>Criar</button>
         </div>
         {quizzes.length === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>Nenhum quiz criado</p>
+          <EmptyState
+            icon="quiz"
+            variante="primaria"
+            titulo="Nenhum quiz por aqui"
+            mensagem="Crie um quiz para usar em sessões ao vivo com a turma."
+          />
         ) : (
           quizzes.map((q) => (
             <div key={q.id} style={quizCard}>

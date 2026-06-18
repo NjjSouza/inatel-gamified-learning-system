@@ -1,12 +1,6 @@
 // Mapeamento de codepoint para emoji unicode nativo
 // Usado como fallback quando o CDN do Twemoji é bloqueado (Edge, Safari com proteção de rastreamento)
 const CODEPOINT_TO_EMOJI = {
-  "1faa8": "🪨",
-  "1f949": "🥉",
-  "1f948": "🥈",
-  "1f947": "🥇",
-  "1f52e": "🔮",
-  "1f48e": "💎",
   "26a1":  "⚡",
   "23f1":  "⏱",
   "1f3c6": "🏆",

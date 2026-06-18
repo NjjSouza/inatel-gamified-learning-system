@@ -5,6 +5,7 @@ import { useClasses } from "../hooks/useClasses";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import Spinner from "../components/Spinner";
+import EmptyState from "../components/EmptyState";
 
 function CoursePageProfessor() {
   const { courseId } = useParams();
@@ -70,9 +71,12 @@ function CoursePageProfessor() {
         </div>
 
         {classes.length === 0 ? (
-          <p style={{ color: "var(--texto-suave)" }}>
-            Nenhuma turma cadastrada para esta disciplina.
-          </p>
+          <EmptyState
+            icon="layers"
+            variante="primaria"
+            titulo="Nenhuma turma nesta disciplina"
+            mensagem="Crie uma turma para começar a matricular alunos."
+          /> 
         ) : (
           classes.map((c) => (
             <button

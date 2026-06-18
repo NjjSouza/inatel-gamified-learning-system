@@ -5,6 +5,7 @@ import { db } from "../services/firebase";
 import { useSessions } from "../hooks/useSessions";
 import { useQuizzes } from "../hooks/useQuizzes";
 import Spinner from "../components/Spinner";
+import EmptyState from "../components/EmptyState";
 
 /**
  * Página somente-leitura de respostas abertas de UMA sessão específica.
@@ -121,11 +122,11 @@ export default function OpenAnswersHistory() {
 
       {/* Sem respostas */}
       {totalRespostas === 0 && (
-        <div style={card}>
-          <p style={{ color: "var(--texto-suave)" }}>
-            Nenhuma resposta aberta registrada nesta sessão.
-          </p>
-        </div>
+        <EmptyState
+          icon="file"
+          variante="neutro"
+          titulo="Nenhuma resposta aberta registrada nesta sessão"
+        />
       )}
 
       {/* Questões */}

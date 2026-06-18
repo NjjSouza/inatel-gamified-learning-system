@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuizzes } from "../hooks/useQuizzes";
 import TwemojiImg from "../components/TwemojiImg";
 import Spinner from "../components/Spinner";
+import EmptyState from "../components/EmptyState";
 
 export default function EditQuiz() {
   const { quizId } = useParams();
@@ -238,7 +239,12 @@ export default function EditQuiz() {
       </h2>
 
       {questions.length === 0 ? (
-        <p style={{ color: "var(--texto-suave)" }}>Nenhuma pergunta ainda</p>
+        <EmptyState
+          icon="quiz"
+          variante="primaria"
+          titulo="Nenhuma pergunta adicionada"
+          mensagem="Adicione todas as perguntas referentes a este quizusando o formulário acima."
+        />
       ) : (
         <ul style={{ padding: 0 }}>
           {questions.map((q, i) => (
